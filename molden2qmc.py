@@ -6,6 +6,7 @@ import os
 import sys
 import numpy as np
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 from math import pi, sqrt, factorial, fabs
 from itertools import combinations
 from operator import itemgetter
@@ -727,6 +728,7 @@ ORBITAL COEFFICIENTS (normalized AO)
         """
         fortran_bool = {True: '.true.', False: '.false.'}
         with open(f, 'w') as gwfn:
+            self.multiple_fits()
             params = dict(
                 title=self.title,
                 version=__version__,
@@ -778,8 +780,8 @@ ORBITAL COEFFICIENTS (normalized AO)
         """Gaussian orbital"""
         return sum(coeff * np.exp(-exponent*x*x) for exponent, coeff in data)
 
-    def fit(self):
-        """Fit gaussian basis by slater"""
+    def multiple_fits(self):
+        """Fit all orbitals in GTO basis"""
 
         def slater_1(x, a1, zeta1, a2, zeta2):
             """Best fit for n=0 orbital from ano-pVDZ set for He-Ne"""
@@ -795,45 +797,41 @@ ORBITAL COEFFICIENTS (normalized AO)
 
         fit = [slater_1, slater_2, slater_3]
 
-        s = p = d = 0
-        n = 1
-        for i, shell in enumerate(self.atom_list[0]['SHELLS']):
-            if shell['TYPE'] == 's':
-                s += 1
-            elif shell['TYPE'] == 'p':
-                p += 1
-            elif shell['TYPE'] == 'd':
-                d += 1
-            if d == n:
-                data = shell['DATA']
-                fit_function = fit[n-1]
-                break
+        n = 0
+        prev_shell_type = ''
+        for shell in self.atom_list[0]['SHELLS']:
+            if shell['TYPE'] == prev_shell_type:
+                n += 1
+            else:
+                n = 0
+            xdata = np.linspace(0.0, 9.0, 50)
+            ydata = self.gaussian(xdata, shell['DATA'])
+            self.fit(fit[n], xdata, ydata)
 
-        xdata = np.linspace(0.0, 5.0, 50)
-        ydata = self.gaussian(xdata, data)
+    def fit(self, fit_function, xdata, ydata):
+        """Fit gaussian basis by slater"""
+
+        plot = True
 
         try:
             popt, pcov = curve_fit(fit_function, xdata, ydata)
             perr = np.sqrt(np.diag(pcov))
-            self.plot(xdata, ydata, fit_function, popt)
             print(popt, perr)
-        except:
-            import matplotlib.pyplot as plt
-            plt.plot(xdata, ydata, 'b-', label='data')
-            plt.xlabel('x')
-            plt.ylabel('y')
-            plt.legend()
-            plt.show()
-
-    def plot(self, xdata, ydata, f, popt):
-        """Plot fit"""
-        import matplotlib.pyplot as plt
-        plt.plot(xdata, ydata, 'b-', label='data')
-        plt.plot(xdata, f(xdata, *popt), 'r-', label='fit')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.legend()
-        plt.show()
+            if plot:
+                plt.plot(xdata, ydata, 'b-', label='data')
+                plt.plot(xdata, fit_function(xdata, *popt), 'r-', label='fit')
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.legend()
+                plt.show()
+        except Exception as e:
+            print(e)
+            if plot:
+                plt.plot(xdata, ydata, 'b-', label='data')
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.legend()
+                plt.show()
 
 
 class DefaultConverter(STOWFN):
