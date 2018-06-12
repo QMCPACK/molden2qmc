@@ -4,6 +4,8 @@
 import argparse
 import os
 import sys
+import numpy as np
+from scipy.optimize import curve_fit
 from math import pi, sqrt, factorial, fabs
 from itertools import combinations
 from operator import itemgetter
@@ -615,6 +617,67 @@ class Molden(object):
 
         return result
 
+    def gaussian(self, x, data):
+        """Gaussian orbital"""
+        return sum(coeff * np.exp(-exponent*x*x) for exponent, coeff in data)
+
+    def fit(self):
+        """Fit gaussian basis by slater"""
+
+        def slater_1(x, a1, zeta1, a2, zeta2):
+            """Best fit for n=0 orbital from ano-pVDZ set for He-Ne"""
+            return a1*np.exp(-zeta1*x) + a2*np.exp(-zeta2*x)
+
+        def slater_2(x, a1, b1, zeta1, a2, zeta2):
+            """Best fit for n=1 orbital from ano-pVDZ set for He-Ne"""
+            return (a1+b1*x)*np.exp(-zeta1*x) + a2*np.exp(-zeta2*x)
+
+        def slater_3(x, a1, b1, c1, zeta1):
+            """Best fit for n=2 orbital from ano-pVDZ set for Li-Ne"""
+            return (a1+b1*x+c1*x*x)*np.exp(-zeta1*x)
+
+        fit = [slater_1, slater_2, slater_3]
+
+        s = p = d = 0
+        n = 1
+        for i, shell in enumerate(self.atom_list[0]['SHELLS']):
+            if shell['TYPE'] == 's':
+                s += 1
+            elif shell['TYPE'] == 'p':
+                p += 1
+            elif shell['TYPE'] == 'd':
+                d += 1
+            if d == n:
+                data = shell['DATA']
+                fit_function = fit[n-1]
+                break
+
+        xdata = np.linspace(0.0, 5.0, 50)
+        ydata = self.gaussian(xdata, data)
+
+        try:
+            popt, pcov = curve_fit(fit_function, xdata, ydata)
+            perr = np.sqrt(np.diag(pcov))
+            self.plot(xdata, ydata, fit_function, popt)
+            print(popt, perr)
+        except:
+            import matplotlib.pyplot as plt
+            plt.plot(xdata, ydata, 'b-', label='data')
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.legend()
+            plt.show()
+
+    def plot(self, xdata, ydata, f, popt):
+        """Plot fit"""
+        import matplotlib.pyplot as plt
+        plt.plot(xdata, ydata, 'b-', label='data')
+        plt.plot(xdata, f(xdata, *popt), 'r-', label='fit')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.legend()
+        plt.show()
+
 
 class DefaultConverter(Molden):
     """
@@ -1181,7 +1244,8 @@ def main():
     elif args.code == 2:
         CFour(input_file, args.pseudoatoms).gwfn(args.output_file)
     elif args.code == 3:
-        Orca(input_file, args.pseudoatoms).gwfn(args.output_file)
+        Orca(input_file, args.pseudoatoms).fit()
+        # Orca(input_file, args.pseudoatoms).gwfn(args.output_file)
     elif args.code == 4:
         Dalton(input_file, args.pseudoatoms).gwfn(args.output_file)
     elif args.code == 5:
@@ -1190,6 +1254,7 @@ def main():
         NwChem(input_file, args.pseudoatoms).gwfn(args.output_file)
     elif args.code == 7:
         QChem(input_file, args.pseudoatoms).gwfn(args.output_file)
+
 
 if __name__ == "__main__":
     main()
