@@ -703,9 +703,9 @@ Sequence number of first shell on each centre
 Code for shell types (s/sp/p/d/f/g 1/2/3/4/5/6)
 {shell_types}
 Order of radial prefactor r in each shell
-
+{radial_prefactor}
 Exponent in each STO shell
-
+{exponents}
 Number of basis functions ('AO')
 {nbasis_functions:10d}
 Number of molecular orbitals ('MO')
@@ -736,20 +736,43 @@ ORBITAL COEFFICIENTS (normalized AO)
                 natom=self.natom(),
                 nshell=self.nshell(),
                 nbasis_functions=self.nbasis_functions(),
-                nprimitives=self.nprimitives(),
-                highest_ang_mo=self.highest_ang_mo(),
                 positions=self.positions(),
                 atomic_numbers=self.atomic_numbers(),
                 valence_charges=self.valence_charges(),
-                shell_types=self.shell_types(),
-                primitives=self.primitives(),
                 first_shell=self.first_shell(),
+                shell_types=self.shell_types(),
+                radial_prefactor=self.radial_prefactor(),
                 exponents=self.exponents(),
-                contraction_coefficients=self.contraction_coefficients(),
-                shell_positions=self.shell_positions(),
                 orbital_coefficients=self.orbital_coefficients()
             )
             gwfn.write(self.template.format(**params))
+
+    def first_shell(self):
+        """
+        :return: first shell
+        """
+        result = ''
+        sequence_number = 1
+        for num, atom in enumerate(self.atom_list):
+            if num % 8 == 0 and num > 0:
+                result += "\n"
+            result += "{:10d}".format(sequence_number)
+            sequence_number += len(atom['SHELLS'])
+        return result
+
+    def radial_prefactor(self):
+        """
+        :return: radial_prefactor
+        """
+        result = ''
+        return result
+
+    def exponents(self):
+        """
+        :return: slater exponents
+        """
+        result = ''
+        return result
 
     def gaussian(self, x, data):
         """Gaussian orbital"""
