@@ -777,40 +777,54 @@ ORBITAL COEFFICIENTS (normalized AO)
         return sum(coeff * np.exp(-exponent*x*x) for exponent, coeff in data)
 
     def multiple_fits(self):
-        """Fit all orbitals in GTO basis"""
+        """Fit all orbitals in GTO basis
+        use Laguerre polynomials
+        """
 
-        def slater_1(r, a1, zeta1):
+        def slater_1(r, a1, zeta1, a2, zeta2):
             """Best fit for n=0 orbital from ano-pVDZ set for He-Ne"""
-            return a1*np.exp(-zeta1*r)
+            return a1*np.exp(-zeta1*r) + a2*np.exp(-zeta2*r)
+
+        def slater_1(r, a1, a2, zeta2):
+            """Best fit for n=0 orbital from ano-pVDZ set for He-Ne"""
+            return a1*np.exp(-3*r) + a2*np.exp(-zeta2*r)
 
         def slater_2(r, a1, zeta1, a2, zeta2):
             """Best fit for n=1 orbital from ano-pVDZ set for Be-Ne"""
-            return a1*np.exp(-zeta1*r) + a2*r*np.exp(-zeta2*r)
+            return a1*np.exp(-zeta1*r) + a2*(1-r)*np.exp(-zeta2*r)
 
-        def slater_3(r, a1, zeta1, a2, zeta2):
+        def slater_3(r,  a1, zeta1, a2, zeta2):
             """Best fit for n=2 orbital from ano-pVDZ set for Li-Ne"""
-            return a1*np.exp(-zeta1*r) + a2*r**2*np.exp(-zeta2*r)
+            return a1*np.exp(-zeta1*r) + a2*r*np.exp(-zeta2*r)
+            return a1*np.exp(-zeta1*r) + a2*(0.5*r**2 - 2*r + 1)*np.exp(-zeta2*r)
 
-        fit_function = [slater_1, slater_2, slater_3]
-        p0 = [(1, 1), (1, 1, 1, 1), (1, 1, -1, 1)]
+        def slater_4(r, a1, zeta1, a2, zeta2):
+            """Best fit for n=2 orbital from ano-pVDZ set for Li-Ne"""
+            return a1*np.exp(-zeta1*r) + a2*r**3*np.exp(-zeta2*r)
+
+        fit_function = [slater_1, slater_2, slater_3, slater_2, slater_2, slater_2, slater_2, slater_2]
+        p0 = [(1, 1, 1, 1), (1, 1, 1, 1), (1, 1, -1, 1), (1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 1)]
 
         n = 0
+        m = -1
         prev_shell_type = ''
         for atom in self.atom_list:
             for shell in atom['SHELLS']:
                 if shell['TYPE'] == prev_shell_type:
                     n += 1
+                    m += 1
                 else:
                     prev_shell_type = shell['TYPE']
                     n = self.ang_momentum_map[shell['TYPE']]
-                xdata = np.linspace(0.0, 2.0, 50)
+                    m += 1
+                xdata = np.linspace(0.0, 3.0, 50)
                 ydata = self.gaussian(xdata, shell['DATA'])
                 print('{}{} orbital'.format(n+1, shell['TYPE']))
-                print(p0[n])
+                print(p0[m])
                 popt, perr = self.fit(
-                    fit_function[n],
+                    fit_function[m],
                     xdata, ydata,
-                    p0[n]
+                    p0[m]
                 )
                 print(popt, perr)
 
@@ -822,7 +836,6 @@ ORBITAL COEFFICIENTS (normalized AO)
         try:
             popt, pcov = curve_fit(fit_function, xdata, ydata, p0)
             perr = np.sqrt(np.diag(pcov))
-            print(popt, perr)
             if plot:
                 plt.plot(xdata, ydata, 'b-', label='data')
                 plt.plot(xdata, fit_function(xdata, *popt), 'r-', label='fit')
