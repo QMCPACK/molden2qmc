@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 from numpy.polynomial.polynomial import polyval, polyval3d
+from numpy.linalg import norm
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from matplotlib.widgets import Button
@@ -185,28 +186,39 @@ class Backflow:
         return np.where(r < L, (r/L)**2 * (6 - 8 * (r/L) + 3 * (r/L)**2), 1.0)
 
     def ETA(self, ri, rj, rI, channel):
-        """ETA term"""
-        rij = np.hypot(*(ri - rj))
+        """ETA term.
+        :param ri: shape([1,2,3], n, m, l, ...)
+        :param rj: shape([1,2,3], n, m, l, ...)
+        :param rI: shape([1,2,3], n, m, l, ...)
+        :param channel: u-u, u-d
+        :return:
+        """
+        rij = norm(ri - rj, axis=0)
         channel = min(self.ETA_spin_dep-1, channel)
         result = (self.cutoff(rij, self.ETA_L[channel]) *
                   polyval(rij, self.ETA_TERM[:, channel]))
         if rI is not None:
-            riI = np.hypot(*(ri - rI))
+            riI = norm(ri - rI, axis=0)
             result *= self.AE_cutoff(riI, self.AE_L)
         return result
 
     def MU(self, ri, rI, channel):
-        """MU term"""
-        riI = np.hypot(*(ri - rI))
+        """MU term
+        :param ri: shape([1,2,3], n, m, l, ...)
+        :param rI: shape([1,2,3], n, m, l, ...)
+        :param channel: u, d
+        :return:
+        """
+        riI = norm(ri - rI, axis=0)
         channel = min(self.MU_spin_dep-1, channel)
         return (self.cutoff(riI, self.MU_L) *
                 polyval(riI, self.MU_TERM[:, channel]))
 
     def PHI(self, ri, rj, rI, channel):
         """PHI term"""
-        rij = np.hypot(*(ri - rj))
-        riI = np.hypot(*(ri - rI))
-        rjI = np.hypot(*(rj - rI))
+        rij = norm(ri - rj, axis=0)
+        riI = norm(ri - rI, axis=0)
+        rjI = norm(rj - rI, axis=0)
         result = (self.cutoff(riI, self.PHI_L) *
                   self.cutoff(rjI, self.PHI_L) *
                   polyval3d(riI, rjI, rij, self.PHI_TERM[:, :, :, channel]))
@@ -216,9 +228,9 @@ class Backflow:
 
     def THETA(self, ri, rj, rI, channel):
         """THETA term"""
-        rij = np.hypot(*(ri - rj))
-        riI = np.hypot(*(ri - rI))
-        rjI = np.hypot(*(rj - rI))
+        rij = norm(ri - rj, axis=0)
+        riI = norm(ri - rI, axis=0)
+        rjI = norm(rj - rI, axis=0)
         return (self.cutoff(riI, self.PHI_L) *
                 self.cutoff(rjI, self.PHI_L) *
                 polyval3d(riI, rjI, rij, self.THETA_TERM[:, :, :, channel]))
@@ -248,21 +260,18 @@ class Plot1D(Backflow):
         super().__init__()
         self.term = term
         self.read(file)
-        self.x_min = self.y_min = self.y_max = 0.0
+        self.x_min = 0.0
         self.x_max = 10.0
         self.x_steps = 101
-        self.y_steps = 1
-        self.xy_elec = np.array([0.0, 0.0])[:, np.newaxis, np.newaxis]
-        self.xy_nucl = np.array([0.0, 0.0])[:, np.newaxis, np.newaxis]
+        self.xy_elec = np.array([0.0])[:, np.newaxis]
+        self.xy_nucl = np.array([0.0])[:, np.newaxis]
 
-    def grid(self, indexing='xy'):
+    def grid(self):
         """Electron positions (grid).
         :param indexing: cartesian or matrix indexing of output
         :return:
         """
-        x = np.linspace(self.x_min, self.x_max, self.x_steps)
-        y = np.linspace(self.y_min, self.y_max, self.y_steps)
-        return np.meshgrid(x, y, indexing=indexing)
+        return np.linspace(self.x_min, self.x_max, self.x_steps)
 
     def backflow(self, grid, channel):
         """Backflow.
@@ -294,7 +303,7 @@ class Plot1D(Backflow):
         nucleus is at (0,0,0) for MU term
         """
         for channel in range(self.spin_dep):
-            plt.plot(self.grid()[0][0], self.backflow(self.grid(), channel)[0][0], label=self.label(channel))
+            plt.plot(self.grid(), self.backflow(self.grid(), channel)[0], label=self.label(channel))
         plt.xlabel('r (au)')
         plt.ylabel('displacement (au)')
         plt.title('{} backflow term'.format(self.term))
