@@ -263,8 +263,8 @@ class Plot1D(Backflow):
         self.x_min = 0.0
         self.x_max = 10.0
         self.x_steps = 101
-        self.xy_elec = np.array([0.0])[:, np.newaxis]
-        self.xy_nucl = np.array([0.0])[:, np.newaxis]
+        self.xy_elec = [0.0]
+        self.xy_nucl = [0.0]
 
     def grid(self):
         """Electron positions (grid).
@@ -279,10 +279,12 @@ class Plot1D(Backflow):
         :param channel: [u] or [d]
         :return:
         """
+        xy_elec = np.array(self.xy_elec)[:, np.newaxis]
+        xy_nucl = np.array(self.xy_nucl)[:, np.newaxis]
         if self.term == 'ETA':
-            return self.ETA(grid, self.xy_elec, None, channel) * (self.xy_elec - grid)
+            return self.ETA(grid, xy_elec, None, channel) * (xy_elec - grid)
         elif self.term == 'MU':
-            return self.MU(grid, self.xy_nucl, channel) * (self.xy_nucl - grid)
+            return self.MU(grid, xy_nucl, channel) * (xy_nucl - grid)
 
     @property
     def spin_dep(self):
@@ -325,8 +327,8 @@ class Plot2D(Backflow):
         self.read(file)
         self.x_max = self.y_max = self.max_L
         self.x_min = self.y_min = -self.max_L
-        self.xy_elec = np.array([0.0, 0.0])[:, np.newaxis, np.newaxis]
-        self.xy_nucl = np.array([0.0, 0.0])[:, np.newaxis, np.newaxis]
+        self.xy_elec = [0.0, 0.0]
+        self.xy_nucl = [0.0, 0.0]
         self.plot_cutoff = False
         self.plot_type = 0
         self.channel_3D = 0
@@ -373,7 +375,11 @@ class Plot2D(Backflow):
         self.y_steps = 100
         x = np.linspace(self.x_min, self.x_max, self.x_steps)
         y = np.linspace(self.y_min, self.y_max, self.y_steps)
-        return np.meshgrid(x, y, indexing=indexing)
+        self.z_steps = 3
+        self.z_max = 2*self.max_L/(self.x_steps-1)
+        self.z_min = - self.z_max
+        z = np.linspace(self.z_min, self.z_max, self.z_steps)
+        return np.meshgrid(x, y, z, indexing=indexing)
 
     def backflow(self, grid, channel):
         """Backflow.
@@ -381,58 +387,44 @@ class Plot2D(Backflow):
         :param channel: [u-u] or [u-d]
         :return:
         """
+        xy_elec = np.array(self.xy_elec)[:, np.newaxis, np.newaxis]
+        xy_nucl = np.array(self.xy_nucl)[:, np.newaxis, np.newaxis]
         if self.term == 'PHI':
-            return self.PHI(grid, self.xy_elec, self.xy_nucl, channel) * (self.xy_elec - grid)
+            return self.PHI(grid, xy_elec, xy_nucl, channel) * (xy_elec - grid)
         elif self.term == 'THETA':
-            return self.THETA(grid, self.xy_elec, self.xy_nucl, channel) * (self.xy_nucl - grid)
+            return self.THETA(grid, xy_elec, xy_nucl, channel) * (xy_nucl - grid)
         elif self.term == 'ALL':
-            return self.ALL(grid, self.xy_elec, self.xy_nucl, channel)
+            return self.ALL(grid, xy_elec, xy_nucl, channel)
 
-    def backflow_z(self, ri, rj, rI, channel):
+    def backflow_3D(self, grid, channel):
+        """Backflow.
+        :param grid: first electron positions
+        :param channel: [u-u] or [u-d]
+        :return:
+        """
+        xy_elec = np.array(self.xy_elec + [0])[:, np.newaxis, np.newaxis, np.newaxis]
+        xy_nucl = np.array(self.xy_nucl + [0])[:, np.newaxis, np.newaxis, np.newaxis]
         if self.term == 'PHI':
-            return self.PHI(ri, rj, rI, channel)
+            return self.PHI(grid, xy_elec, xy_nucl, channel) * (xy_elec - grid)
         elif self.term == 'THETA':
-            return self.THETA(ri, rj, rI, channel)
+            return self.THETA(grid, xy_elec, xy_nucl, channel) * (xy_nucl - grid)
         elif self.term == 'ALL':
-            result = 0
-            if self.ETA_TERM is not None:
-                result += self.ETA(ri, rj, rI, channel)
-            if self.MU_TERM is not None:
-                result += self.MU(ri, rI, channel)
-            if self.PHI_TERM is not None:
-                result += self.PHI(ri, rj, rI, channel)
-                if not self.PHI_irrotational:
-                    result += self.THETA(ri, rj, rI, channel)
-            return result
+            return self.ALL(grid, xy_elec, xy_nucl, channel)
 
     def jacobian_det(self, indexing, channel):
-        """Jacobian matrix & det
+        """Jacobian matrix & determinant
         first electron is at the self.grid() i.e. (x,y,0)
         second electron is at the position (self.xy_elec[0],self.xy_elec[1],0)
         nucleus is at the position (0,0,0)
-        For backflow displacement:
-          Backflow[Z](x, y, 0) = z * (ETA(ri) + MU(ri-rj) + PHI(ri) + THETA(ri-rj)) = 0
-         dBackflow[Z](x, y, 0)/dx = 0
-         dBackflow[Z](x, y, 0)/dy = 0
-         dBackflow[Z](x, y, 0)/dz = ETA(ri) + MU(ri-rj) + PHI(ri) + THETA(ri-rj)
-
-                     | dBackflow[X]/dx  dBackflow[X]/dy     no matter    |   | 1  0  0 |
-          jacobian = | dBackflow[Y]/dx  dBackflow[Y]/dy     no matter    | + | 0  1  0 |
-                     |         0                0        dBackflow[Z]/dz |   | 0  0  1 |
         :return:
         """
-        # self.z_steps = 3
-        # self.z_max = self.max_L / (self.x_steps - 1)
-        # self.z_min = - self.z_max
-        # z = np.linspace(self.z_min, self.z_max, self.z_steps)
-
         grid = self.grid_3D(indexing)
-        func = self.backflow(grid, channel) + np.array(grid)
-        jacobian = [np.gradient(f, 2*self.max_L/(self.x_steps-1)) for f in func]
-        det_xy = jacobian[0][0] * jacobian[1][1] - jacobian[1][0] * jacobian[0][1]
-        det_z = 1 + self.backflow_z(grid, self.xy_elec, self.xy_nucl, channel)
+        vect = self.backflow_3D(grid, channel) + np.array(grid)
+        jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
+        jacobian = np.moveaxis(jacobian, 0, -1)
+        jacobian = np.moveaxis(jacobian, 0, -1)
         det_sign = 1 if indexing == 'ij' else -1
-        return det_sign * det_xy * det_z
+        return det_sign * np.linalg.det(jacobian)
 
     def plot2D(self, replot=False):
         """Plot backflow.
@@ -451,18 +443,39 @@ class Plot2D(Backflow):
             self.axs[channel].set_xlabel('X axis')
             self.axs[channel].set_ylabel('Y axis')
             if self.plot_type == 0:
-                self.axs[channel].quiver(*self.grid('xy'), *self.backflow(self.grid('xy'), channel), angles='xy', scale_units='xy', scale=1, color=['blue', 'green'][channel])
+                self.axs[channel].quiver(
+                    *self.grid('xy'),
+                    *self.backflow(self.grid('xy'), channel),
+                    angles='xy', scale_units='xy',
+                    scale=1, color=['blue', 'green'][channel]
+                )
             elif self.plot_type == 1:
                 for indexing in 'xy', 'ij':
-                    self.axs[channel].plot(*(self.grid(indexing) + self.backflow(self.grid(indexing), channel)), color=['blue', 'green'][channel])
+                    self.axs[channel].plot(
+                        *(self.grid(indexing) + self.backflow(self.grid(indexing), channel)),
+                        color=['blue', 'green'][channel]
+                    )
             elif self.plot_type == 2:
                 for indexing in 'xy', 'ij':
-                    self.axs[channel].plot(*(self.grid(indexing) + self.backflow(self.grid(indexing), channel)), color=['blue', 'green'][channel])
+                    self.axs[channel].plot(
+                        *(self.grid(indexing) + self.backflow(self.grid(indexing), channel)),
+                        color=['blue', 'green'][channel]
+                    )
             elif self.plot_type == 3:
-                contours = self.axs[channel].contour(*self.grid_3D('ij'), self.jacobian_det('ij', channel), 10, colors='black')
+                contours = self.axs[channel].contour(
+                    self.grid_3D('ij')[0][:, :, 1],
+                    self.grid_3D('ij')[1][:, :, 1],
+                    self.jacobian_det('ij', channel)[:, :, 1],
+                    10,
+                    colors='black'
+                )
                 plt.clabel(contours, inline=True, fontsize=8)
                 # indexing = 'ij' for origin = 'lower' or indexing = 'xy' for origin = 'upper'
-                img = self.axs[channel].imshow(self.jacobian_det('ij', channel), extent=[self.x_min, self.x_max, self.y_min, self.y_max], origin='lower', cmap='summer')
+                img = self.axs[channel].imshow(
+                    self.jacobian_det('ij', channel)[:, :, 1],
+                    extent=[self.x_min, self.x_max, self.y_min, self.y_max],
+                    origin='lower', cmap='summer'
+                )
                 # plt.colorbar(img)
             if self.plot_cutoff:
                 if self.ETA_L is not None:
@@ -494,7 +507,12 @@ class Plot2D(Backflow):
         # https://github.com/matplotlib/matplotlib/issues/487 - masked array not supported
         mask = (self.grid_3D('ij')[0] < 0) | (self.grid_3D('ij')[1] > 0)
         jacobian = np.where(mask, self.jacobian_det('ij', channel), np.nan)
-        self.ax.plot_wireframe(*self.grid_3D('ij'), jacobian, color=['blue', 'green'][channel])
+        self.ax.plot_wireframe(
+            self.grid_3D('ij')[0][:, :, 1],
+            self.grid_3D('ij')[1][:, :, 1],
+            jacobian[:, :, 1],
+            color=['blue', 'green'][channel]
+        )
         self.ax.set_xlabel('X axis')
         self.ax.set_ylabel('Y axis')
         self.ax.set_zlabel('Z axis')
@@ -515,7 +533,7 @@ class Plot2D(Backflow):
             return
         if not (self.x_min < event.xdata < self.x_max or self.y_min < event.xdata < self.y_max):
             return
-        self.xy_elec = np.array([event.xdata, event.ydata])[:, np.newaxis, np.newaxis]
+        self.xy_elec = [event.xdata, event.ydata]
         self.plot(replot=True)
 
     def onpress(self, event):
