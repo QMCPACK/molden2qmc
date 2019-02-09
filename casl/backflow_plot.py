@@ -247,7 +247,7 @@ class Plot1D(Backflow):
         """
         super().__init__()
         self.term = term
-        self.read_input_file(file)
+        self.read(file)
         self.x_min = self.y_min = self.y_max = 0.0
         self.x_max = 10.0
         self.x_steps = 101
