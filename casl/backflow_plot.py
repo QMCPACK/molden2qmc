@@ -185,11 +185,11 @@ class Backflow:
         """All electron atom cutoff"""
         return np.where(r < L, (r/L)**2 * (6 - 8 * (r/L) + 3 * (r/L)**2), 1.0)
 
-    def ETA(self, ri, rj, rI, channel):
+    def ETA(self, ri, rj, rI_list, channel):
         """ETA term.
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rj: shape([1,2,3], n, m, l, ...)
-        :param rI: shape([1,2,3], n, m, l, ...)
+        :param rI_list: list of shape([1,2,3], n, m, l, ...)
         :param channel: u-u, u-d
         :return:
         """
@@ -197,55 +197,77 @@ class Backflow:
         channel = min(self.ETA_spin_dep-1, channel)
         result = (self.cutoff(rij, self.ETA_L[channel]) *
                   polyval(rij, self.ETA_TERM[:, channel]))
-        if rI is not None:
+        for rI in rI_list:
             riI = norm(ri - rI, axis=0)
             result *= self.AE_cutoff(riI, self.AE_L)
-        return result
+        return result * (rj - ri)
 
-    def MU(self, ri, rI, channel):
+    def MU(self, ri, rI_list, channel):
         """MU term
         :param ri: shape([1,2,3], n, m, l, ...)
-        :param rI: shape([1,2,3], n, m, l, ...)
+        :param rI_list: list of shape([1,2,3], n, m, l, ...)
         :param channel: u, d
         :return:
         """
-        riI = norm(ri - rI, axis=0)
-        channel = min(self.MU_spin_dep-1, channel)
-        return (self.cutoff(riI, self.MU_L) *
-                polyval(riI, self.MU_TERM[:, channel]))
-
-    def PHI(self, ri, rj, rI, channel):
-        """PHI term"""
-        rij = norm(ri - rj, axis=0)
-        riI = norm(ri - rI, axis=0)
-        rjI = norm(rj - rI, axis=0)
-        result = (self.cutoff(riI, self.PHI_L) *
-                  self.cutoff(rjI, self.PHI_L) *
-                  polyval3d(riI, rjI, rij, self.PHI_TERM[:, :, :, channel]))
-        if self.PHI_CUSP:
-            result *= self.AE_cutoff(riI, self.AE_L)
+        result = 0
+        for k, rI in enumerate(rI_list):
+            riI = norm(ri - rI, axis=0)
+            channel = min(self.MU_spin_dep-1, channel)
+            mu = self.cutoff(riI, self.MU_L)
+            mu *= polyval(riI, self.MU_TERM[:, channel])
+            for l, rI_other in enumerate(rI_list):
+                if k != l:
+                    riI_other = norm(ri - rI_other, axis=0)
+                    mu *= self.AE_cutoff(riI_other, self.AE_L)
+            result += mu * (rI - ri)
         return result
 
-    def THETA(self, ri, rj, rI, channel):
-        """THETA term"""
-        rij = norm(ri - rj, axis=0)
-        riI = norm(ri - rI, axis=0)
-        rjI = norm(rj - rI, axis=0)
-        return (self.cutoff(riI, self.PHI_L) *
-                self.cutoff(rjI, self.PHI_L) *
-                polyval3d(riI, rjI, rij, self.THETA_TERM[:, :, :, channel]))
+    def PHI(self, ri, rj, rI_list, channel):
+        """PHI term
+        :param ri: shape([1,2,3], n, m, l, ...)
+        :param rj: shape([1,2,3], n, m, l, ...)
+        :param rI_list: list of shape([1,2,3], n, m, l, ...)
+        :param channel: u, d
+        :return:
+        """
+        result = 1
+        for rI in rI_list:
+            rij = norm(ri - rj, axis=0)
+            riI = norm(ri - rI, axis=0)
+            rjI = norm(rj - rI, axis=0)
+            result *= self.cutoff(riI, self.PHI_L) * self.cutoff(rjI, self.PHI_L)
+            result *= polyval3d(riI, rjI, rij, self.PHI_TERM[:, :, :, channel])
+            if self.PHI_CUSP:
+                result *= self.AE_cutoff(riI, self.AE_L)
+        return result * (rj - ri)
 
-    def ALL(self, ri, rj, rI, channel):
+    def THETA(self, ri, rj, rI_list, channel):
+        """THETA term"""
+        result = 0
+        for k, rI in enumerate(rI_list):
+            rij = norm(ri - rj, axis=0)
+            riI = norm(ri - rI, axis=0)
+            rjI = norm(rj - rI, axis=0)
+            theta = self.cutoff(riI, self.PHI_L) * self.cutoff(rjI, self.PHI_L)
+            theta *= polyval3d(riI, rjI, rij, self.THETA_TERM[:, :, :, channel])
+            for l, rI_other in enumerate(rI_list):
+                if k != l:
+                    riI_other = norm(ri - rI_other, axis=0)
+                    theta *= self.AE_cutoff(riI_other, self.AE_L)
+            result += theta * (rI - ri)
+        return result
+
+    def ALL(self, ri, rj, rI_list, channel):
         """Total displacement"""
         result = 0
         if self.ETA_TERM is not None:
-            result += self.ETA(ri, rj, rI, channel) * (rj - ri)
+            result += self.ETA(ri, rj, rI_list, channel)
         if self.MU_TERM is not None:
-            result += self.MU(ri, rI, channel) * (rI - ri)
+            result += self.MU(ri, rI_list, channel)
         if self.PHI_TERM is not None:
-            result += self.PHI(ri, rj, rI, channel) * (rj - ri)
+            result += self.PHI(ri, rj, rI_list, channel)
             if not self.PHI_irrotational:
-                result += self.THETA(ri, rj, rI, channel) * (rI - ri)
+                result += self.THETA(ri, rj, rI_list, channel)
         return result
 
 
@@ -282,9 +304,9 @@ class Plot1D(Backflow):
         xy_elec = np.array(self.xy_elec)[:, np.newaxis]
         xy_nucl = np.array(self.xy_nucl)[:, np.newaxis]
         if self.term == 'ETA':
-            return self.ETA(grid, xy_elec, None, channel) * (xy_elec - grid)
+            return self.ETA(grid, xy_elec, [], channel)
         elif self.term == 'MU':
-            return self.MU(grid, xy_nucl, channel) * (xy_nucl - grid)
+            return self.MU(grid, [xy_nucl], channel)
 
     @property
     def spin_dep(self):
@@ -390,11 +412,11 @@ class Plot2D(Backflow):
         xy_elec = np.array(self.xy_elec)[:, np.newaxis, np.newaxis]
         xy_nucl = np.array(self.xy_nucl)[:, np.newaxis, np.newaxis]
         if self.term == 'PHI':
-            return self.PHI(grid, xy_elec, xy_nucl, channel) * (xy_elec - grid)
+            return self.PHI(grid, xy_elec, [xy_nucl], channel)
         elif self.term == 'THETA':
-            return self.THETA(grid, xy_elec, xy_nucl, channel) * (xy_nucl - grid)
+            return self.THETA(grid, xy_elec, [xy_nucl], channel)
         elif self.term == 'ALL':
-            return self.ALL(grid, xy_elec, xy_nucl, channel)
+            return self.ALL(grid, xy_elec, [xy_nucl], channel)
 
     def backflow_3D(self, grid, channel):
         """Backflow.
@@ -405,17 +427,20 @@ class Plot2D(Backflow):
         xy_elec = np.array(self.xy_elec + [0])[:, np.newaxis, np.newaxis, np.newaxis]
         xy_nucl = np.array(self.xy_nucl + [0])[:, np.newaxis, np.newaxis, np.newaxis]
         if self.term == 'PHI':
-            return self.PHI(grid, xy_elec, xy_nucl, channel) * (xy_elec - grid)
+            return self.PHI(grid, xy_elec, [xy_nucl], channel)
         elif self.term == 'THETA':
-            return self.THETA(grid, xy_elec, xy_nucl, channel) * (xy_nucl - grid)
+            return self.THETA(grid, xy_elec, [xy_nucl], channel)
         elif self.term == 'ALL':
-            return self.ALL(grid, xy_elec, xy_nucl, channel)
+            return self.ALL(grid, xy_elec, [xy_nucl], channel)
 
     def jacobian_det(self, indexing, channel):
         """Jacobian matrix & determinant
         first electron is at the self.grid() i.e. (x,y,0)
         second electron is at the position (self.xy_elec[0],self.xy_elec[1],0)
         nucleus is at the position (0,0,0)
+
+        jacobian[i][j] = dvect[xi]/dxj
+
         :return:
         """
         grid = self.grid_3D(indexing)
@@ -425,6 +450,14 @@ class Plot2D(Backflow):
         jacobian = np.moveaxis(jacobian, 0, -1)
         det_sign = 1 if indexing == 'ij' else -1
         return det_sign * np.linalg.det(jacobian)
+
+    def curl(self, indexing, channel):
+        """Curl"""
+        grid = self.grid_3D(indexing)
+        vect = self.backflow_3D(grid, channel) + np.array(grid)
+        jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
+
+        return jacobian[1][0] - jacobian[0][1]
 
     def plot2D(self, replot=False):
         """Plot backflow.
@@ -504,15 +537,24 @@ class Plot2D(Backflow):
             self.fig_3D = plt.figure()
             self.ax = self.fig_3D.add_subplot(111, projection='3d')
         self.ax.clear()
-        # https://github.com/matplotlib/matplotlib/issues/487 - masked array not supported
-        mask = (self.grid_3D('ij')[0] < 0) | (self.grid_3D('ij')[1] > 0)
-        jacobian = np.where(mask, self.jacobian_det('ij', channel), np.nan)
-        self.ax.plot_wireframe(
-            self.grid_3D('ij')[0][:, :, 1],
-            self.grid_3D('ij')[1][:, :, 1],
-            jacobian[:, :, 1],
-            color=['blue', 'green'][channel]
-        )
+        if True:
+            # https://github.com/matplotlib/matplotlib/issues/487 - masked array not supported
+            mask = (self.grid_3D('ij')[0] < 0) | (self.grid_3D('ij')[1] > 0)
+            jacobian = np.where(mask, self.jacobian_det('ij', channel), np.nan)
+            self.ax.plot_wireframe(
+                self.grid_3D('ij')[0][:, :, 1],
+                self.grid_3D('ij')[1][:, :, 1],
+                # self.curl('ij', channel)[:, :, 1],
+                jacobian[:, :, 1],
+                color=['blue', 'green'][channel]
+            )
+        else:
+            self.ax.plot_wireframe(
+                self.grid_3D('ij')[0][:, :, 1],
+                self.grid_3D('ij')[1][:, :, 1],
+                self.curl('ij', channel)[:, :, 1],
+                color=['blue', 'green'][channel]
+            )
         self.ax.set_xlabel('X axis')
         self.ax.set_ylabel('Y axis')
         self.ax.set_zlabel('Z axis')
