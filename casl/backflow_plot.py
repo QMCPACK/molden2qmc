@@ -11,10 +11,9 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 # TODO: implement a method to write a backflow file
-# plot a CURL
-# TODO: write a generator of monomials in THETA and PHI decomposition
-# TODO: интерполировать backflow порядка X_Y_ZZ, более меньшим порядком.
-# TODO: интерполировать backflow порядка X_Y_ZZ, не полиномиальными функциями.
+# TODO: write a generator of monomials of THETA and PHI polynom. decomposition
+# TODO: interpolate backflow of order X_Y_ZZ, with polynomial functions.
+# TODO: interpolate backflow of order X_Y_ZZ, non-polynomial functions.
 
 class Backflow:
     """Backflow reader from file.
@@ -169,6 +168,7 @@ class Backflow:
                         else:
                             a, b, c, d = map(int, line.split()[3].split('_')[1].split(','))
                             if line.split()[3].split('_')[0] == 'phi':
+                                # print((a, b, c, d), next(phi_powers))
                                 self.PHI_TERM[a][b][c][d-1] = float(line.split()[0])
                             elif line.split()[3].split('_')[0] == 'theta':
                                 # print((a, b, c, d), next(theta_powers))
@@ -353,6 +353,7 @@ class Plot2D(Backflow):
         self.xy_nucl = [0.0, 0.0]
         self.plot_cutoff = False
         self.plot_type = 0
+        self.plot_3d_type = 0
         self.channel_3D = 0
 
     @property
@@ -451,13 +452,19 @@ class Plot2D(Backflow):
         det_sign = 1 if indexing == 'ij' else -1
         return det_sign * np.linalg.det(jacobian)
 
+    def div(self, indexing, channel):
+        """Divergence"""
+        grid = self.grid_3D(indexing)
+        vect = self.backflow_3D(grid, channel)
+        jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
+        return jacobian[0][0] + jacobian[1][1] + jacobian[2][2]
+
     def curl(self, indexing, channel):
         """Curl"""
         grid = self.grid_3D(indexing)
-        vect = self.backflow_3D(grid, channel) + np.array(grid)
+        vect = self.backflow_3D(grid, channel)
         jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
-
-        return jacobian[1][0] - jacobian[0][1]
+        return jacobian[2][1]-jacobian[1][2], jacobian[0][2]-jacobian[2][0], jacobian[1][0] - jacobian[0][1]
 
     def plot2D(self, replot=False):
         """Plot backflow.
@@ -537,22 +544,40 @@ class Plot2D(Backflow):
             self.fig_3D = plt.figure()
             self.ax = self.fig_3D.add_subplot(111, projection='3d')
         self.ax.clear()
-        if True:
+        if self.plot_3d_type == 0:
+            self.ax.set_title('Jacobian {} backflow {} term'.format(self.term, ['u-u', 'u-d'][channel]))
             # https://github.com/matplotlib/matplotlib/issues/487 - masked array not supported
             mask = (self.grid_3D('ij')[0] < 0) | (self.grid_3D('ij')[1] > 0)
             jacobian = np.where(mask, self.jacobian_det('ij', channel), np.nan)
             self.ax.plot_wireframe(
                 self.grid_3D('ij')[0][:, :, 1],
                 self.grid_3D('ij')[1][:, :, 1],
-                # self.curl('ij', channel)[:, :, 1],
                 jacobian[:, :, 1],
                 color=['blue', 'green'][channel]
             )
-        else:
+        elif self.plot_3d_type == 1:
+            self.ax.set_title('Curl[Z] {} backflow {} term'.format(self.term, ['u-u', 'u-d'][channel]))
             self.ax.plot_wireframe(
                 self.grid_3D('ij')[0][:, :, 1],
                 self.grid_3D('ij')[1][:, :, 1],
-                self.curl('ij', channel)[:, :, 1],
+                self.curl('ij', channel)[2][:, :, 1],
+                color=['blue', 'green'][channel]
+            )
+            # self.ax.quiver(
+            #     self.grid_3D('ij')[0][:, :, 1],
+            #     self.grid_3D('ij')[1][:, :, 1],
+            #     self.grid_3D('ij')[2][:, :, 1],
+            #     self.curl('ij', channel)[0][:, :, 1],
+            #     self.curl('ij', channel)[1][:, :, 1],
+            #     self.curl('ij', channel)[2][:, :, 1],
+            #     pivot='tail', color=['blue', 'green'][channel]
+            # )
+        elif self.plot_3d_type == 2:
+            self.ax.set_title('Div {} backflow {} term'.format(self.term, ['u-u', 'u-d'][channel]))
+            self.ax.plot_wireframe(
+                self.grid_3D('ij')[0][:, :, 1],
+                self.grid_3D('ij')[1][:, :, 1],
+                self.div('ij', channel)[:, :, 1],
                 color=['blue', 'green'][channel]
             )
         self.ax.set_xlabel('X axis')
@@ -586,6 +611,8 @@ class Plot2D(Backflow):
             self.plot_cutoff = not self.plot_cutoff
         elif event.key == 'f3':
             self.channel_3D = (self.channel_3D + 1) % 2
+        elif event.key == 'f4':
+            self.plot_3d_type = (self.plot_3d_type + 1) % 3
         self.plot(replot=True)
 
 
