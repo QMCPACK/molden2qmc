@@ -25,12 +25,20 @@ class Backflow:
     def __init__(self):
         """Init."""
         self.ETA_TERM = None
-        self.MU_TERM = None
-        self.PHI_TERM = None
-        self.THETA_TERM = None
+        self.MU_TERM = []
+        self.PHI_TERM = []
+        self.THETA_TERM = []
         self.ETA_L = None
-        self.MU_L = None
-        self.PHI_L = None
+        self.MU_L = []
+        self.MU_CUSP = []
+        self.MU_order = []
+        self.MU_spin_dep = []
+        self.PHI_L = []
+        self.PHI_CUSP = []
+        self.PHI_irrotational = []
+        self.PHI_ee_order = []
+        self.PHI_en_order = []
+        self.PHI_spin_dep = []
         self.AE_L = None
 
     def ETA_powers(self):
@@ -76,8 +84,8 @@ class Backflow:
         with open(file, 'r') as f:
             AE = False
             ETA = ETA_params = False
-            MU = MU_params = False
-            PHI = PHI_params = False
+            MU = MU_params = MU_set = False
+            PHI = PHI_params = PHI_set = False
             line = f.readline()
             eta_powers = self.ETA_powers()
             mu_powers = self.MU_powers()
@@ -126,53 +134,65 @@ class Backflow:
                         assert (a, b) == next(eta_powers)
                         self.ETA_TERM[a][b-1] = float(line.split()[0])
                 elif MU:
-                    if line.strip().startswith('Type of e-N cusp conditions'):
-                        self.MU_CUSP = bool(int(f.readline().split()[0]))
-                    elif line.strip().startswith('Expansion order'):
-                        self.MU_order = int(f.readline().split()[0]) + 1
-                    elif line.strip().startswith('Spin dep'):
-                        self.MU_spin_dep = int(f.readline().split()[0]) + 1
-                    elif line.strip().startswith('Cutoff (a.u.)'):
-                        self.MU_L = float(f.readline().split()[0])
-                    elif line.strip().startswith('Parameter values'):
-                        self.MU_TERM = np.zeros((self.MU_order, self.MU_spin_dep), 'd')
-                        MU_params = True
-                    elif MU_params:
-                        if line.strip().startswith('END SET'):
-                            MU_params = False
-                        else:
+                    if line.strip().startswith('Number of sets'):
+                        self.MU_sets = int(f.readline().split()[0])
+                        set = 0
+                    if line.strip().startswith('START SET'):
+                        MU_set = True
+                    if line.strip().startswith('END SET'):
+                        MU_set = MU_params = False
+                        set += 1
+                    if MU_set:
+                        if line.strip().startswith('Type of e-N cusp conditions'):
+                            self.MU_CUSP.append(bool(int(f.readline().split()[0])))
+                        elif line.strip().startswith('Expansion order'):
+                            self.MU_order.append(int(f.readline().split()[0]) + 1)
+                        elif line.strip().startswith('Spin dep'):
+                            self.MU_spin_dep.append(int(f.readline().split()[0]) + 1)
+                        elif line.strip().startswith('Cutoff (a.u.)'):
+                            self.MU_L.append(float(f.readline().split()[0]))
+                        elif line.strip().startswith('Parameter values'):
+                            self.MU_TERM.append(np.zeros((self.MU_order[set], self.MU_spin_dep[set]), 'd'))
+                            MU_params = True
+                        elif MU_params:
                             a, b = map(int, line.split()[3].split('_')[1].split(','))
-                            assert (a, b) == next(mu_powers)
-                            self.MU_TERM[a][b-1] = float(line.split()[0])
+                            # assert (a, b) == next(mu_powers)
+                            self.MU_TERM[set][a][b-1] = float(line.split()[0])
                 elif PHI:
-                    if line.strip().startswith('Type of e-N cusp conditions'):
-                        self.PHI_CUSP = bool(int(f.readline().split()[0]))
-                    elif line.strip().startswith('Irrotational Phi'):
-                        self.PHI_irrotational = bool(int(f.readline().split()[0]))
-                    elif line.strip().startswith('Electron-nucleus expansion order'):
-                        self.PHI_en_order = int(f.readline().split()[0]) + 1
-                    elif line.strip().startswith('Electron-electron expansion order'):
-                        self.PHI_ee_order = int(f.readline().split()[0]) + 1
-                    elif line.strip().startswith('Spin dep'):
-                        self.PHI_spin_dep = int(f.readline().split()[0]) + 1
-                    elif line.strip().startswith('Cutoff (a.u.)'):
-                        self.PHI_L = float(f.readline().split()[0])
-                    elif line.strip().startswith('Parameter values'):
-                        self.PHI_TERM = np.zeros((self.PHI_en_order, self.PHI_en_order, self.PHI_ee_order, self.PHI_spin_dep), 'd')
-                        if not self.PHI_irrotational:
-                            self.THETA_TERM = np.zeros((self.PHI_en_order, self.PHI_en_order, self.PHI_ee_order, self.PHI_spin_dep), 'd')
-                        PHI_params = True
-                    elif PHI_params:
-                        if line.strip().startswith('END SET'):
-                            PHI_params = False
-                        else:
+                    if line.strip().startswith('Number of sets'):
+                        self.PHI_sets = int(f.readline().split()[0])
+                        set = 0
+                    if line.strip().startswith('START SET'):
+                        PHI_set = True
+                    if line.strip().startswith('END SET'):
+                        PHI_set = PHI_params = False
+                        set += 1
+                    if PHI_set:
+                        if line.strip().startswith('Type of e-N cusp conditions'):
+                            self.PHI_CUSP.append(bool(int(f.readline().split()[0])))
+                        elif line.strip().startswith('Irrotational Phi'):
+                            self.PHI_irrotational.append(bool(int(f.readline().split()[0])))
+                        elif line.strip().startswith('Electron-nucleus expansion order'):
+                            self.PHI_en_order.append(int(f.readline().split()[0]) + 1)
+                        elif line.strip().startswith('Electron-electron expansion order'):
+                            self.PHI_ee_order.append(int(f.readline().split()[0]) + 1)
+                        elif line.strip().startswith('Spin dep'):
+                            self.PHI_spin_dep.append(int(f.readline().split()[0]) + 1)
+                        elif line.strip().startswith('Cutoff (a.u.)'):
+                            self.PHI_L.append(float(f.readline().split()[0]))
+                        elif line.strip().startswith('Parameter values'):
+                            self.PHI_TERM.append(np.zeros((self.PHI_en_order[set], self.PHI_en_order[set], self.PHI_ee_order[set], self.PHI_spin_dep[set]), 'd'))
+                            if not self.PHI_irrotational[set]:
+                                self.THETA_TERM.append(np.zeros((self.PHI_en_order[set], self.PHI_en_order[set], self.PHI_ee_order[set], self.PHI_spin_dep[set]), 'd'))
+                            PHI_params = True
+                        elif PHI_params:
                             a, b, c, d = map(int, line.split()[3].split('_')[1].split(','))
                             if line.split()[3].split('_')[0] == 'phi':
                                 # print((a, b, c, d), next(phi_powers))
-                                self.PHI_TERM[a][b][c][d-1] = float(line.split()[0])
+                                self.PHI_TERM[set][a][b][c][d-1] = float(line.split()[0])
                             elif line.split()[3].split('_')[0] == 'theta':
                                 # print((a, b, c, d), next(theta_powers))
-                                self.THETA_TERM[a][b][c][d-1] = float(line.split()[0])
+                                self.THETA_TERM[set][a][b][c][d-1] = float(line.split()[0])
                 elif AE:
                     if line.strip().startswith('Nucleus'):
                         self.AE_L = float(f.readline().split()[2])
@@ -202,19 +222,20 @@ class Backflow:
             result *= self.AE_cutoff(riI, self.AE_L)
         return result * (rj - ri)
 
-    def MU(self, ri, rI_list, channel):
+    def MU(self, ri, rI_list, channel, set):
         """MU term
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rI_list: list of shape([1,2,3], n, m, l, ...)
         :param channel: u, d
+        :param set: 0, 1, 2
         :return:
         """
         result = 0
         for k, rI in enumerate(rI_list):
             riI = norm(ri - rI, axis=0)
-            channel = min(self.MU_spin_dep-1, channel)
-            mu = self.cutoff(riI, self.MU_L)
-            mu *= polyval(riI, self.MU_TERM[:, channel])
+            channel = min(self.MU_spin_dep[set]-1, channel)
+            mu = self.cutoff(riI, self.MU_L[set])
+            mu *= polyval(riI, self.MU_TERM[set][:, channel])
             for l, rI_other in enumerate(rI_list):
                 if k != l:
                     riI_other = norm(ri - rI_other, axis=0)
@@ -222,12 +243,13 @@ class Backflow:
             result += mu * (rI - ri)
         return result
 
-    def PHI(self, ri, rj, rI_list, channel):
+    def PHI(self, ri, rj, rI_list, channel, set):
         """PHI term
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rj: shape([1,2,3], n, m, l, ...)
         :param rI_list: list of shape([1,2,3], n, m, l, ...)
         :param channel: u, d
+        :param set: 0, 1, 2
         :return:
         """
         result = 1
@@ -235,21 +257,28 @@ class Backflow:
             rij = norm(ri - rj, axis=0)
             riI = norm(ri - rI, axis=0)
             rjI = norm(rj - rI, axis=0)
-            result *= self.cutoff(riI, self.PHI_L) * self.cutoff(rjI, self.PHI_L)
-            result *= polyval3d(riI, rjI, rij, self.PHI_TERM[:, :, :, channel])
-            if self.PHI_CUSP:
+            result *= self.cutoff(riI, self.PHI_L[set]) * self.cutoff(rjI, self.PHI_L[set])
+            result *= polyval3d(riI, rjI, rij, self.PHI_TERM[set][:, :, :, channel])
+            if self.PHI_CUSP[set]:
                 result *= self.AE_cutoff(riI, self.AE_L)
         return result * (rj - ri)
 
-    def THETA(self, ri, rj, rI_list, channel):
-        """THETA term"""
+    def THETA(self, ri, rj, rI_list, channel, set):
+        """THETA term
+        :param ri: shape([1,2,3], n, m, l, ...)
+        :param rj: shape([1,2,3], n, m, l, ...)
+        :param rI_list: list of shape([1,2,3], n, m, l, ...)
+        :param channel: u, d
+                :param set: 0, 1, 2
+        :return:
+        """
         result = 0
         for k, rI in enumerate(rI_list):
             rij = norm(ri - rj, axis=0)
             riI = norm(ri - rI, axis=0)
             rjI = norm(rj - rI, axis=0)
-            theta = self.cutoff(riI, self.PHI_L) * self.cutoff(rjI, self.PHI_L)
-            theta *= polyval3d(riI, rjI, rij, self.THETA_TERM[:, :, :, channel])
+            theta = self.cutoff(riI, self.PHI_L[set]) * self.cutoff(rjI, self.PHI_L[set])
+            theta *= polyval3d(riI, rjI, rij, self.THETA_TERM[set][:, :, :, channel])
             for l, rI_other in enumerate(rI_list):
                 if k != l:
                     riI_other = norm(ri - rI_other, axis=0)
@@ -257,17 +286,17 @@ class Backflow:
             result += theta * (rI - ri)
         return result
 
-    def ALL(self, ri, rj, rI_list, channel):
+    def ALL(self, ri, rj, rI_list, channel, set):
         """Total displacement"""
         result = 0
         if self.ETA_TERM is not None:
             result += self.ETA(ri, rj, rI_list, channel)
-        if self.MU_TERM is not None:
-            result += self.MU(ri, rI_list, channel)
+        if self.MU_TERM:
+            result += self.MU(ri, rI_list, channel, set)
         if self.PHI_TERM is not None:
-            result += self.PHI(ri, rj, rI_list, channel)
-            if not self.PHI_irrotational:
-                result += self.THETA(ri, rj, rI_list, channel)
+            result += self.PHI(ri, rj, rI_list, channel, set)
+            if not self.PHI_irrotational[set]:
+                result += self.THETA(ri, rj, rI_list, channel, set)
         return result
 
 
@@ -295,7 +324,7 @@ class Plot1D(Backflow):
         """
         return np.linspace(self.x_min, self.x_max, self.x_steps)
 
-    def backflow(self, grid, channel):
+    def backflow(self, grid, channel, set):
         """Backflow.
         :param grid: electron positions
         :param channel: [u] or [d]
@@ -306,28 +335,22 @@ class Plot1D(Backflow):
         if self.term == 'ETA':
             return self.ETA(grid, xy_elec, [], channel)
         elif self.term == 'MU':
-            return self.MU(grid, [xy_nucl], channel)
-
-    @property
-    def spin_dep(self):
-        if self.term == 'ETA':
-            return self.ETA_spin_dep
-        elif self.term == 'MU':
-            return self.MU_spin_dep
-
-    def label(self, channel):
-        if self.term == 'ETA':
-            return ['u-u', 'u-d'][channel]
-        elif self.term == 'MU':
-            return ['u', 'd'][channel]
+            return self.MU(grid, [xy_nucl], channel, set)
 
     def plot(self):
         """
         electron is at (0,0,0) for ETA term
         nucleus is at (0,0,0) for MU term
         """
-        for channel in range(self.spin_dep):
-            plt.plot(self.grid(), self.backflow(self.grid(), channel)[0], label=self.label(channel))
+        if self.term == 'ETA':
+            for channel in range(self.ETA_spin_dep):
+                plt.plot(self.grid(),
+                         self.backflow(self.grid(), channel)[0], label=['u-u', 'u-d'][channel])
+        elif self.term == 'MU':
+            for set in range(self.MU_sets):
+                for channel in range(self.MU_spin_dep[set]):
+                    label = 'set: {} channel: {}'.format(set, ['u', 'd'][channel])
+                    plt.plot(self.grid(), self.backflow(self.grid(), channel, set)[0], label=label)
         plt.xlabel('r (au)')
         plt.ylabel('displacement (au)')
         plt.title('{} backflow term'.format(self.term))
@@ -345,27 +368,28 @@ class Plot2D(Backflow):
         :param file: backflow data file.
         """
         super().__init__()
-        self.term = term
-        self.read(file)
-        self.x_max = self.y_max = self.max_L
-        self.x_min = self.y_min = -self.max_L
-        self.xy_elec = [0.0, 0.0]
-        self.xy_nucl = [0.0, 0.0]
-        self.plot_cutoff = False
         self.plot_type = 0
         self.plot_3d_type = 0
         self.channel_3D = 0
+        self.set = 0
+        self.plot_cutoff = False
+        self.term = term
+        self.read(file)
+        self.xy_elec = [0.0, 0.0]
+        self.xy_nucl = [0.0, 0.0]
 
     @property
     def max_L(self):
         """max cutoff"""
-        return max(np.max(self.ETA_L) or 0, self.MU_L or 0, self.PHI_L or 0)
+        return max(np.max(self.ETA_L) or 0, self.MU_L[self.set] or 0, self.PHI_L[self.set] or 0)
 
     def grid(self, indexing='xy'):
         """First electron positions (grid).
         :param indexing: cartesian or matrix indexing of output
         :return:
         """
+        self.x_max = self.y_max = self.max_L
+        self.x_min = self.y_min = -self.max_L
         if self.plot_type in (0, 1):
             self.x_steps = 25
             self.y_steps = 25
@@ -404,7 +428,7 @@ class Plot2D(Backflow):
         z = np.linspace(self.z_min, self.z_max, self.z_steps)
         return np.meshgrid(x, y, z, indexing=indexing)
 
-    def backflow(self, grid, channel):
+    def backflow(self, grid, channel, set=0):
         """Backflow.
         :param grid: first electron positions
         :param channel: [u-u] or [u-d]
@@ -413,13 +437,13 @@ class Plot2D(Backflow):
         xy_elec = np.array(self.xy_elec)[:, np.newaxis, np.newaxis]
         xy_nucl = np.array(self.xy_nucl)[:, np.newaxis, np.newaxis]
         if self.term == 'PHI':
-            return self.PHI(grid, xy_elec, [xy_nucl], channel)
+            return self.PHI(grid, xy_elec, [xy_nucl], channel, set)
         elif self.term == 'THETA':
-            return self.THETA(grid, xy_elec, [xy_nucl], channel)
+            return self.THETA(grid, xy_elec, [xy_nucl], channel, set)
         elif self.term == 'ALL':
-            return self.ALL(grid, xy_elec, [xy_nucl], channel)
+            return self.ALL(grid, xy_elec, [xy_nucl], channel, set)
 
-    def backflow_3D(self, grid, channel):
+    def backflow_3D(self, grid, channel, set):
         """Backflow.
         :param grid: first electron positions
         :param channel: [u-u] or [u-d]
@@ -428,13 +452,13 @@ class Plot2D(Backflow):
         xy_elec = np.array(self.xy_elec + [0])[:, np.newaxis, np.newaxis, np.newaxis]
         xy_nucl = np.array(self.xy_nucl + [0])[:, np.newaxis, np.newaxis, np.newaxis]
         if self.term == 'PHI':
-            return self.PHI(grid, xy_elec, [xy_nucl], channel)
+            return self.PHI(grid, xy_elec, [xy_nucl], channel, set)
         elif self.term == 'THETA':
-            return self.THETA(grid, xy_elec, [xy_nucl], channel)
+            return self.THETA(grid, xy_elec, [xy_nucl], channel, set)
         elif self.term == 'ALL':
-            return self.ALL(grid, xy_elec, [xy_nucl], channel)
+            return self.ALL(grid, xy_elec, [xy_nucl], channel, set)
 
-    def jacobian_det(self, indexing, channel):
+    def jacobian_det(self, indexing, channel, set):
         """Jacobian matrix & determinant
         first electron is at the self.grid() i.e. (x,y,0)
         second electron is at the position (self.xy_elec[0],self.xy_elec[1],0)
@@ -445,24 +469,24 @@ class Plot2D(Backflow):
         :return:
         """
         grid = self.grid_3D(indexing)
-        vect = self.backflow_3D(grid, channel) + np.array(grid)
+        vect = self.backflow_3D(grid, channel, set) + np.array(grid)
         jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
         jacobian = np.moveaxis(jacobian, 0, -1)
         jacobian = np.moveaxis(jacobian, 0, -1)
         det_sign = 1 if indexing == 'ij' else -1
         return det_sign * np.linalg.det(jacobian)
 
-    def div(self, indexing, channel):
+    def div(self, indexing, channel, set):
         """Divergence"""
         grid = self.grid_3D(indexing)
-        vect = self.backflow_3D(grid, channel)
+        vect = self.backflow_3D(grid, channel, set)
         jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
         return jacobian[0][0] + jacobian[1][1] + jacobian[2][2]
 
-    def curl(self, indexing, channel):
+    def curl(self, indexing, channel, set):
         """Curl"""
         grid = self.grid_3D(indexing)
-        vect = self.backflow_3D(grid, channel)
+        vect = self.backflow_3D(grid, channel, set)
         jacobian = [np.gradient(comp, 2*self.max_L/(self.x_steps-1)) for comp in vect]
         return jacobian[2][1]-jacobian[1][2], jacobian[0][2]-jacobian[2][0], jacobian[1][0] - jacobian[0][1]
 
@@ -485,34 +509,34 @@ class Plot2D(Backflow):
             if self.plot_type == 0:
                 self.axs[channel].quiver(
                     *self.grid('xy'),
-                    *self.backflow(self.grid('xy'), channel),
+                    *self.backflow(self.grid('xy'), channel, self.set),
                     angles='xy', scale_units='xy',
                     scale=1, color=['blue', 'green'][channel]
                 )
             elif self.plot_type == 1:
                 for indexing in 'xy', 'ij':
                     self.axs[channel].plot(
-                        *(self.grid(indexing) + self.backflow(self.grid(indexing), channel)),
+                        *(self.grid(indexing) + self.backflow(self.grid(indexing), channel, self.set)),
                         color=['blue', 'green'][channel]
                     )
             elif self.plot_type == 2:
                 for indexing in 'xy', 'ij':
                     self.axs[channel].plot(
-                        *(self.grid(indexing) + self.backflow(self.grid(indexing), channel)),
+                        *(self.grid(indexing) + self.backflow(self.grid(indexing), channel, self.set)),
                         color=['blue', 'green'][channel]
                     )
             elif self.plot_type == 3:
                 contours = self.axs[channel].contour(
                     self.grid_3D('ij')[0][:, :, 1],
                     self.grid_3D('ij')[1][:, :, 1],
-                    self.jacobian_det('ij', channel)[:, :, 1],
+                    self.jacobian_det('ij', channel, self.set)[:, :, 1],
                     10,
                     colors='black'
                 )
                 plt.clabel(contours, inline=True, fontsize=8)
                 # indexing = 'ij' for origin = 'lower' or indexing = 'xy' for origin = 'upper'
                 img = self.axs[channel].imshow(
-                    self.jacobian_det('ij', channel)[:, :, 1],
+                    self.jacobian_det('ij', channel, self.set)[:, :, 1],
                     extent=[self.x_min, self.x_max, self.y_min, self.y_max],
                     origin='lower', cmap='summer'
                 )
@@ -521,9 +545,9 @@ class Plot2D(Backflow):
                 if self.ETA_L is not None:
                     self.axs[channel].add_patch(Circle(self.xy_elec, self.ETA_L[channel], fill=False, linestyle=':', label='ETA e-e cutoff'))
                 if self.MU_L is not None:
-                    self.axs[channel].add_patch(Circle(self.xy_nucl, self.MU_L, fill=False, color='c', label='MU e-n cutoff'))
+                    self.axs[channel].add_patch(Circle(self.xy_nucl, self.MU_L[self.set], fill=False, color='c', label='MU e-n cutoff'))
                 if self.PHI_L is not None:
-                    self.axs[channel].add_patch(Circle(self.xy_nucl, self.PHI_L, fill=False, color='y', label='PHI e-n cutoff'))
+                    self.axs[channel].add_patch(Circle(self.xy_nucl, self.PHI_L[self.set], fill=False, color='y', label='PHI e-n cutoff'))
                 if self.PHI_CUSP and self.AE_L is not None:
                     self.axs[channel].add_patch(Circle(self.xy_nucl, self.AE_L, fill=False, label='AE cutoff'))
             self.axs[channel].legend()
@@ -548,7 +572,7 @@ class Plot2D(Backflow):
             self.ax.set_title('Jacobian {} backflow {} term'.format(self.term, ['u-u', 'u-d'][channel]))
             # https://github.com/matplotlib/matplotlib/issues/487 - masked array not supported
             mask = (self.grid_3D('ij')[0] < 0) | (self.grid_3D('ij')[1] > 0)
-            jacobian = np.where(mask, self.jacobian_det('ij', channel), np.nan)
+            jacobian = np.where(mask, self.jacobian_det('ij', channel, self.set), np.nan)
             self.ax.plot_wireframe(
                 self.grid_3D('ij')[0][:, :, 1],
                 self.grid_3D('ij')[1][:, :, 1],
@@ -560,7 +584,7 @@ class Plot2D(Backflow):
             self.ax.plot_wireframe(
                 self.grid_3D('ij')[0][:, :, 1],
                 self.grid_3D('ij')[1][:, :, 1],
-                self.curl('ij', channel)[2][:, :, 1],
+                self.curl('ij', channel, self.set)[2][:, :, 1],
                 color=['blue', 'green'][channel]
             )
             # self.ax.quiver(
@@ -577,7 +601,7 @@ class Plot2D(Backflow):
             self.ax.plot_wireframe(
                 self.grid_3D('ij')[0][:, :, 1],
                 self.grid_3D('ij')[1][:, :, 1],
-                self.div('ij', channel)[:, :, 1],
+                self.div('ij', channel, self.set)[:, :, 1],
                 color=['blue', 'green'][channel]
             )
         self.ax.set_xlabel('X axis')
@@ -613,6 +637,8 @@ class Plot2D(Backflow):
             self.channel_3D = (self.channel_3D + 1) % 2
         elif event.key == 'f4':
             self.plot_3d_type = (self.plot_3d_type + 1) % 3
+        elif event.key == 'f5':
+            self.set = (self.set + 1) % self.MU_sets
         self.plot(replot=True)
 
 
