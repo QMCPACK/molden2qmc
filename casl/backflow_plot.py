@@ -82,6 +82,7 @@ class Backflow:
     def read(self, file):
         """Open file and read backflow data."""
         with open(file, 'r') as f:
+            backflow = False
             AE = False
             ETA = ETA_params = False
             MU = MU_params = MU_set = False
@@ -93,7 +94,9 @@ class Backflow:
             theta_powers = self.THETA_powers()
             while line:
                 line = f.readline()
-                if line.strip().startswith('Truncation order'):
+                if line.strip().startswith('START BACKFLOW'):
+                    backflow = True
+                elif line.strip().startswith('Truncation order'):
                     self.C = float(f.readline().split()[0])
                 elif line.strip().startswith('START ETA TERM'):
                     ETA = True
@@ -196,6 +199,9 @@ class Backflow:
                 elif AE:
                     if line.strip().startswith('Nucleus'):
                         self.AE_L = float(f.readline().split()[2])
+            if not backflow:
+                print('No BACKLOW section found')
+                exit(0)
 
     def cutoff(self, r, L):
         """General cutoff"""
