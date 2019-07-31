@@ -90,6 +90,8 @@ def Be_1s2pz(r1, r2):
 
 
 def Be(r12_minus, r34_minus, r12_plus):
+    u"""HF = |1s(r1)2s(r2)|α * |1s(r3)2s(r4)|β"""
+    r12_plus = r12_plus + 3.0
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = [1, 0, 0]
     B = np.pi/4.0
@@ -105,11 +107,12 @@ def Be(r12_minus, r34_minus, r12_plus):
     return Be_1s2s(r1, r2) * Be_1s2s(r3, r4)
 
 
-def Be_4det(r12_minus, r34_minus, r12_plus):
+def Be_4det(r12_minus, r34_minus, theta12):
+    u"""CI = φ(1s 2 2s 2 ) + cφ(1s 22p 2 )"""
+    r12_plus = np.full((100, 100), 6.0)
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = [1, 0, 0]
-    B = np.pi/4.0
-    vec_2 = vec_4 = [np.cos(B), np.sin(B), 0]
+    vec_2 = vec_4 = [np.cos(theta12), np.sin(theta12), 0*theta12]
     C = -0.15
     r1n = (r12_plus + r12_minus)/2.0
     r2n = (r12_plus - r12_minus)/2.0
