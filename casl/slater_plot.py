@@ -90,43 +90,70 @@ def Be_1s2pz(r1, r2):
 
 
 def Be(r12_minus, r34_minus, r12_plus):
-    u"""HF = |1s(r1)2s(r2)|α * |1s(r3)2s(r4)|β"""
+    u"""HF = |1s(r1)2s(r2)| * |1s(r3)2s(r4)|"""
     r12_plus = r12_plus + 3.0
     r34_plus = np.full((100, 100), 6.0)
-    vec_1 = vec_3 = [1, 0, 0]
+    vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
     B = np.pi/4.0
-    vec_2 = vec_4 = [np.cos(B), np.sin(B), 0]
+    vec_2 = vec_4 = np.array([np.cos(B), np.sin(B), 0])[:, np.newaxis, np.newaxis]
     r1n = (r12_plus + r12_minus)/2.0
     r2n = (r12_plus - r12_minus)/2.0
-    r1 = np.einsum('i, jk->ijk', vec_1, r1n)
-    r2 = np.einsum('i, jk->ijk', vec_2, r2n)
+    r1 = vec_1 * r1n[np.newaxis]
+    r2 = vec_2 * r2n[np.newaxis]
     r3n = (r34_plus + r34_minus)/2.0
     r4n = (r34_plus - r34_minus)/2.0
-    r3 = np.einsum('i, jk->ijk', vec_3, r3n)
-    r4 = np.einsum('i, jk->ijk', vec_4, r4n)
+    r3 = vec_3 * r3n[np.newaxis]
+    r4 = vec_4 * r4n[np.newaxis]
     return Be_1s2s(r1, r2) * Be_1s2s(r3, r4)
 
 
-def Be_4det(r12_minus, r34_minus, theta12):
-    u"""CI = φ(1s 2 2s 2 ) + cφ(1s 22p 2 )"""
-    r12_plus = np.full((100, 100), 6.0)
+def Be_4det(r12_minus, r34_minus, r12_plus):
+    u"""CI = phi(1s2, 2s2) + C * phi(1s2, 2p2)"""
+#    r12_plus = np.full((100, 100), 6.0)
     r34_plus = np.full((100, 100), 6.0)
-    vec_1 = vec_3 = [1, 0, 0]
-    vec_2 = vec_4 = [np.cos(theta12), np.sin(theta12), 0*theta12]
+    vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
+    phi = np.pi/4.0
+    theta = np.pi/2.0
+    vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])[:, np.newaxis, np.newaxis]
     C = -0.15
     r1n = (r12_plus + r12_minus)/2.0
     r2n = (r12_plus - r12_minus)/2.0
-    r1 = np.einsum('i, jk->ijk', vec_1, r1n)
-    r2 = np.einsum('i, jk->ijk', vec_2, r2n)
+    r1 = vec_1 * r1n[np.newaxis]
+    r2 = vec_2 * r2n[np.newaxis]
     r3n = (r34_plus + r34_minus)/2.0
     r4n = (r34_plus - r34_minus)/2.0
-    r3 = np.einsum('i, jk->ijk', vec_3, r3n)
-    r4 = np.einsum('i, jk->ijk', vec_4, r4n)
+    r3 = vec_3 * r3n[np.newaxis]
+    r4 = vec_4 * r4n[np.newaxis]
     return Be_1s2s(r1, r2) * Be_1s2s(r3, r4) + \
            C * Be_1s2pz(r1, r2) * Be_1s2pz(r3, r4) + \
            C * Be_1s2py(r1, r2) * Be_1s2py(r3, r4) + \
            C * Be_1s2px(r1, r2) * Be_1s2px(r3, r4)
 
 
-# plot_implicit(Be)
+def Be_4det_theta(r12_minus, r34_minus, theta):
+    u"""CI = phi(1s2, 2s2) + C * phi(1s2, 2p2)"""
+    r12_plus = np.full((100, 100), 6.0)
+    r34_plus = np.full((100, 100), 6.0)
+    vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
+    phi = 0 #np.pi/4.0
+    vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])
+    if not theta.shape:
+        vec_2 = vec_4 = vec_2[:, np.newaxis, np.newaxis]
+    C = -0.15
+    r1n = (r12_plus + r12_minus)/2.0
+    r2n = (r12_plus - r12_minus)/2.0
+    r1 = vec_1 * r1n[np.newaxis]
+    r2 = vec_2 * r2n[np.newaxis]
+    r3n = (r34_plus + r34_minus)/2.0
+    r4n = (r34_plus - r34_minus)/2.0
+    r3 = vec_3 * r3n[np.newaxis]
+    r4 = vec_4 * r4n[np.newaxis]
+    return Be_1s2s(r1, r2) * Be_1s2s(r3, r4) + \
+           C * Be_1s2pz(r1, r2) * Be_1s2pz(r3, r4) + \
+           C * Be_1s2py(r1, r2) * Be_1s2py(r3, r4) + \
+           C * Be_1s2px(r1, r2) * Be_1s2px(r3, r4)
+
+
+#plot_implicit(Be)
 plot_implicit(Be_4det)
+#plot_implicit(Be_4det_theta)
