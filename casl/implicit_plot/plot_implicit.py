@@ -45,8 +45,7 @@ def plot_implicit(fn, bbox=(-2.5, 2.5)):
     ax.set_zlabel('Z axis')
     plt.show()
 
-
-if __name__ == '__main__':
+def main():
 
     def goursat_tangle(x, y, z):
         a, b, c = 0.0, -5.0, 11.8
@@ -73,3 +72,7 @@ if __name__ == '__main__':
     plot_implicit(sphere)
     plot_implicit(hyp_part1, bbox=(-100.,100.))
     plot_implicit(union(sphere, translate(sphere, 1.,1.,1.)), (-2.,3.))
+
+
+if __name__ == '__main__':
+    main()
