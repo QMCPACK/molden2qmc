@@ -3,47 +3,8 @@
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 from numpy.linalg import norm, det
+from plot_implicit import plot_implicit
 import numpy as np
-
-
-def plot_implicit(fn, bbox=(-4, 4)):
-    ''' create a plot of an implicit function
-    fn  ...implicit function (plot where fn==0)
-    bbox ..the x,y,and z limits of plotted interval'''
-    xmin, xmax, ymin, ymax, zmin, zmax = bbox*3
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    A = np.linspace(xmin, xmax, 100) # resolution of the contour
-    B = np.linspace(xmin, xmax, 15) # number of slices
-    A1, A2 = np.meshgrid(A, A) # grid on which the contour is plotted
-
-    for z in B: # plot contours in the XY plane
-        X, Y = A1, A2
-        Z = fn(X, Y, z)
-        cset = ax.contour(X, Y, Z+z, [z], zdir='z')
-        # [z] defines the only level to plot for this contour for this value of z
-
-    for y in B: # plot contours in the XZ plane
-        X, Z = A1, A2
-        Y = fn(X, y, Z)
-        cset = ax.contour(X, Y+y, Z, [y], zdir='y')
-
-    for x in B: # plot contours in the YZ plane
-        Y, Z = A1, A2
-        X = fn(x, Y, Z)
-        cset = ax.contour(X+x, Y, Z, [x], zdir='x')
-
-    # must set plot limits because the contour will likely extend
-    # way beyond the displayed level.  Otherwise matplotlib extends the plot limits
-    # to encompass all values in the contour.
-    ax.set_xlim3d(xmin, xmax)
-    ax.set_ylim3d(ymin, ymax)
-    ax.set_zlim3d(zmin, zmax)
-    ax.set_xlabel('X axis')
-    ax.set_ylabel('Y axis')
-    ax.set_zlabel('Z axis')
-
-    plt.show()
 
 
 # http://www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
@@ -73,9 +34,7 @@ def slater_2pz(r):
 
 
 def Be_1s2s(*coords, wfns=(slater_1s, slater_2s)):
-
-    return det(np.stack([np.stack([wfn(r) for r in coords], axis=2) for wfn in wfns], axis=2))
-
+    return slater_1s(r1) * slater_2s(r2) - slater_1s(r2) * slater_2s(r1)
 
 def Be_1s2px(r1, r2):
     return slater_1s(r1) * slater_2px(r2) - slater_1s(r2) * slater_2px(r1)
@@ -94,8 +53,8 @@ def Be(r12_minus, r34_minus, r12_plus):
     r12_plus = r12_plus + 3.0
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
-    B = np.pi/4.0
-    vec_2 = vec_4 = np.array([np.cos(B), np.sin(B), 0])[:, np.newaxis, np.newaxis]
+    phi = np.pi/4.0
+    vec_2 = vec_4 = np.array([np.cos(phi), np.sin(phi), 0])[:, np.newaxis, np.newaxis]
     r1n = (r12_plus + r12_minus)/2.0
     r2n = (r12_plus - r12_minus)/2.0
     r1 = vec_1 * r1n[np.newaxis]
@@ -109,7 +68,6 @@ def Be(r12_minus, r34_minus, r12_plus):
 
 def Be_4det(r12_minus, r34_minus, r12_plus):
     u"""CI = phi(1s2, 2s2) + C * phi(1s2, 2p2)"""
-#    r12_plus = np.full((100, 100), 6.0)
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
     phi = np.pi/4.0
@@ -135,7 +93,7 @@ def Be_4det_theta(r12_minus, r34_minus, theta):
     r12_plus = np.full((100, 100), 6.0)
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
-    phi = 0 #np.pi/4.0
+    phi = np.pi/4.0
     vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])
     if not theta.shape:
         vec_2 = vec_4 = vec_2[:, np.newaxis, np.newaxis]
@@ -154,6 +112,7 @@ def Be_4det_theta(r12_minus, r34_minus, theta):
            C * Be_1s2px(r1, r2) * Be_1s2px(r3, r4)
 
 
-#plot_implicit(Be)
-plot_implicit(Be_4det)
-#plot_implicit(Be_4det_theta)
+if __name__ == '__main__':
+    #plot_implicit(Be)
+    plot_implicit(Be_4det)
+    #plot_implicit(Be_4det_theta)
