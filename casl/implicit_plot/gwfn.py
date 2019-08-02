@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import numpy as np
 from numpy import exp
 from numpy.linalg import norm
 
@@ -12,6 +13,8 @@ class Gwfn:
         """Init."""
         self.atoms = list()
         self.atom_numbers = list()
+        self.shell_code = list()
+        self.shell_primitives = list()
         self.primitives = list()
         self.coeffs = list()
         self.mo = list()
@@ -19,47 +22,87 @@ class Gwfn:
 
     def read(self, file_name):
         """Open file and read gwfn data."""
+        def read_bool():
+            return fp.readline().strip() == '.true.'
+
+        def read_str():
+            return str(fp.readline())
+
+        def read_int():
+            return int(fp.readline())
+
+        def read_float():
+            return float(fp.readline())
+
+        def read_ints(n):
+            result = list()
+            while len(result) < n:
+                line = fp.readline()
+                result += map(int, line.split())
+            return result
+
+        def read_floats(n):
+            result = list()
+            while len(result) < n:
+                line = fp.readline()
+                result += map(float, [line[i*20:(i+1)*20] for i in range(len(line)//20)])
+            return result
+
         with open(file_name, 'r') as fp:
             for line in fp:
                 if line.startswith('TITLE'):
-                    self.title = fp.readline()
+                    self.title = read_str()
+                # BASIC_INFO
+                # ----------
                 elif line.startswith('Spin unrestricted'):
-                    self.unrestricted = True
+                    self.unrestricted = read_bool()
                 elif line.startswith('Number of electrons'):
-                    self.nelec = int(fp.readline())
+                    self.nelec = read_int()
+                # GEOMETRY
+                # --------
                 elif line.startswith('Number of atoms'):
-                    self.natom = int(fp.readline())
+                    self.natom = read_int()
                 elif line.startswith('Atomic positions'):
-                    for i in range(self.natom):
-                        line = fp.readline()
-                        self.atoms.append([float(line[i*20:(i+1)*20]) for i in range(3)])
+                    self.atoms = read_floats(self.natom * 3)
                 elif line.startswith('Atomic numbers for each atom'):
-                    while len(self.atom_numbers) < self.natom:
-                        line = fp.readline()
-                        self.atom_numbers += map(int, line.split())
+                    self.atom_numbers = read_ints(self.natom)
+                # BASIS SET
+                # ---------
+                elif line.startswith('Number of shells per primitive cell'):
+                    self.nshell = read_int()
                 elif line.startswith('Number of basis functions'):
-                    self.nbasis = int(fp.readline())
+                    self.nbasis = read_int()
                 elif line.startswith('Number of Gaussian primitives'):
-                    self.nprimitives = int(fp.readline())
+                    self.nprimitives = read_int()
+                elif line.startswith('Code for shell types'):
+                    self.shell_code = read_ints(self.nshell)
+                elif line.startswith('Number of primitive Gaussians in each shell'):
+                    self.shell_primitives = read_ints(self.nshell)
                 elif line.startswith('Exponents of Gaussian primitives'):
-                    while len(self.primitives) < self.nprimitives:
-                        line = fp.readline()
-                        self.primitives += [float(line[i*20:(i+1)*20]) for i in range(len(line)//20)]
+                    self.primitives = read_floats(self.nprimitives)
                 elif line.startswith('Normalized contraction coefficients'):
-                    while len(self.coeffs) < self.nprimitives:
-                        line = fp.readline()
-                        self.coeffs += [float(line[i*20:(i+1)*20]) for i in range(len(line)//20)]
+                    self.coeffs = read_floats(self.nprimitives)
+                # ORBITAL COEFFICIENTS
+                # --------------------
                 elif line.startswith('ORBITAL COEFFICIENTS'):
                     line = fp.readline()
-                    while len(self.mo) < self.nbasis * self.nbasis:
-                        line = fp.readline()
-                        self.mo += [float(line[i*20:(i+1)*20]) for i in range(len(line)//20)]
+                    self.mo = read_floats(self.nbasis * self.nbasis)
 
-    def wfn(self, r):
-        result = 0
-        for i in range(self.nprimitives):
-            result += self.coeffs[i] * exp(-self.primitives[i]*norm(r, axis=0))
-        return result
+    def s(self, alpha, r):
+        return exp(-alpha * np.sum(r**2))
+
+    def p_x(self, alpha, r):
+        return r[0] * exp(-alpha * np.sum(r**2))
+
+    def p_y(self, alpha, r):
+        return r[1] * exp(-alpha * np.sum(r**2))
+
+    def p_z(self, alpha, r):
+        return r[2] * exp(-alpha * np.sum(r**2))
+
+    def wfn(self, r, fn):
+        return sum(self.coeffs[i] * fn(self.primitives[i], r) for i in range(self.nprimitives))
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -77,7 +120,9 @@ def main():
 
     args = parser.parse_args()
     gwfn = Gwfn(args.gwfn_file)
-    print(gwfn.wfn([1,1,1]))
+    r = np.array([1,1,1])
+    print(gwfn.wfn(r, gwfn.s))
+    print(gwfn.atoms)
 
 if __name__ == "__main__":
     main()
