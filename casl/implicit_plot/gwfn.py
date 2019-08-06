@@ -86,7 +86,6 @@ class Gwfn:
         :param r: electron coordinates with shape (3, n, m, l, ...)
         :return:
         """
-        # radial = coeff * np.exp(-alpha * np.sum(r**2, axis=0)[:, np.newaxis])
         radial = coeff[:, np.newaxis] * np.exp(-alpha[:, np.newaxis] * np.sum(r**2, axis=0))
         harmonic = np.array([0])
         if shell_type == 1:
@@ -136,7 +135,7 @@ class Gwfn:
             end += self.primitives[i]
             res.append(self.gaussian_wfn(shell_type, self.contraction_coefficients[begin:end], self.exponents[begin:end], r))
             begin += self.primitives[i]
-        print(res)
+        return np.einsum('i...,ij->...', mo, np.concatenate(res, axis=0))
 
 
 def main():
@@ -156,7 +155,7 @@ def main():
     args = parser.parse_args()
     gwfn = Gwfn(args.gwfn_file)
     r = np.array([[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]])
-    print(gwfn.wfn(r, gwfn.mo[0]))
+    print(gwfn.wfn(r, gwfn.mo))
 
 
 if __name__ == "__main__":
