@@ -27,15 +27,19 @@ def slater_2py(r):
     Z = 2
     return np.sqrt(Z**5/np.pi) * r[1] * np.exp(-Z*norm(r, axis=0))
 
+
 def slater_2pz(r):
     Z = 2
     return np.sqrt(Z**5/np.pi) * r[2] * np.exp(-Z*norm(r, axis=0))
 
-def wfn_stack(r, wfns)
+
+def wfn_stack(r, wfns):
     return np.stack([wfn(r) for wfn in wfns], axis=2)
+
 
 def Be_1s2s(r1, r2):
     return slater_1s(r1) * slater_2s(r2) - slater_1s(r2) * slater_2s(r1)
+
 
 def Be_1s2px(r1, r2):
     return slater_1s(r1) * slater_2px(r2) - slater_1s(r2) * slater_2px(r1)

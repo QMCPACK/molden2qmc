@@ -2,25 +2,12 @@
 
 import argparse
 import numpy as np
-from numpy import exp
-from numpy.linalg import norm
 
 
 class Gwfn:
     """Gaussian wfn reader from file."""
 
     def __init__(self, file_name):
-        """Init."""
-        self.atoms = list()
-        self.atom_numbers = list()
-        self.shell_code = list()
-        self.shell_primitives = list()
-        self.primitives = list()
-        self.coeffs = list()
-        self.mo = list()
-        self.read(file_name)
-
-    def read(self, file_name):
         """Open file and read gwfn data."""
         def read_bool():
             return fp.readline().strip() == '.true.'
@@ -39,14 +26,14 @@ class Gwfn:
             while len(result) < n:
                 line = fp.readline()
                 result += map(int, line.split())
-            return result
+            return np.array(result)
 
         def read_floats(n):
             result = list()
             while len(result) < n:
                 line = fp.readline()
                 result += map(float, [line[i*20:(i+1)*20] for i in range(len(line)//20)])
-            return result
+            return np.array(result)
 
         with open(file_name, 'r') as fp:
             for line in fp:
@@ -68,40 +55,88 @@ class Gwfn:
                     self.atom_numbers = read_ints(self.natom)
                 # BASIS SET
                 # ---------
+                elif line.startswith('Number of Gaussian centres'):
+                    self.natom = read_int()
                 elif line.startswith('Number of shells per primitive cell'):
                     self.nshell = read_int()
                 elif line.startswith('Number of basis functions'):
-                    self.nbasis = read_int()
+                    self.nbasis_functions = read_int()
                 elif line.startswith('Number of Gaussian primitives'):
                     self.nprimitives = read_int()
                 elif line.startswith('Code for shell types'):
-                    self.shell_code = read_ints(self.nshell)
+                    self.shell_types = read_ints(self.nshell)
                 elif line.startswith('Number of primitive Gaussians in each shell'):
-                    self.shell_primitives = read_ints(self.nshell)
+                    self.primitives = read_ints(self.nshell)
                 elif line.startswith('Exponents of Gaussian primitives'):
-                    self.primitives = read_floats(self.nprimitives)
+                    self.exponents = read_floats(self.nprimitives)
                 elif line.startswith('Normalized contraction coefficients'):
-                    self.coeffs = read_floats(self.nprimitives)
+                    self.contraction_coefficients = read_floats(self.nprimitives)
                 # ORBITAL COEFFICIENTS
                 # --------------------
                 elif line.startswith('ORBITAL COEFFICIENTS'):
                     line = fp.readline()
-                    self.mo = read_floats(self.nbasis * self.nbasis)
+                    self.mo = read_floats(self.nbasis_functions * self.nbasis_functions).reshape((self.nbasis_functions, self.nbasis_functions))
 
-    def s(self, alpha, r):
-        return exp(-alpha * np.sum(r**2))
+    @staticmethod
+    def gaussian_wfn(shell_type, coeff, alpha, r):
+        """
+        from CASINO/examples/generic/gauss_dfg/README
+        :param shell_type: shell types (s/sp/p/d/f... 1/2/3/4/5...)
+        :param alpha: exponent
+        :param r: electron coordinates with shape (3, n, m, l, ...)
+        :return:
+        """
+        # radial = coeff * np.exp(-alpha * np.sum(r**2, axis=0)[:, np.newaxis])
+        radial = coeff[:, np.newaxis] * np.exp(-alpha[:, np.newaxis] * np.sum(r**2, axis=0))
+        harmonic = np.array([0])
+        if shell_type == 1:
+            harmonic = np.array([1])
+        if shell_type == 3:
+            harmonic = np.array(r)
+        x, y, z = r
+        if shell_type == 4:
+            harmonic = np.array([
+                       3 * z**2 - r**2,
+                       x * z,
+                       y * z,
+                       x**2 + y**2,
+                       x * y
+                   ])
+        if shell_type == 5:
+            t1 = (5 * z**2 - 3 * r**2) / 2
+            harmonic = np.array([
+                       z * t1,
+                       3 * x * t1,
+                       3 * y * t1,
+                       15 * z * (x**2 - y**2),
+                       30 * x * y * z,
+                       15 * x * (x**2 - 3 * y**2),
+                       15 * y * (3 * x**2 - y*2),
+                   ])
+        if shell_type == 6:
+            t1 = (7 * z * z - 3 * r**2) / 2
+            t2 = (7 * z * z - r**2) / 2
+            harmonic = np.array([
+                       (35 * z*z*z*z - 30 * z*z*r**2 + 3 * r**4) / 8,
+                       5 * x * z * t1,
+                       5 * y * z * t1,
+                       15 * (x*x - y*y) * t2,
+                       30 * x * y * t2,
+                       105 * x * z * (x*x - 3 * y*y),
+                       105 * y * z * (3 * x*x - y*y),
+                       105 * (x*x*x*x - 6 * x*x*y*y + y*y*y*y),
+                       420 * x * y * (x*x - y*y)
+                   ])
+        return np.einsum('i...,j...->j...', radial, harmonic)
 
-    def p_x(self, alpha, r):
-        return r[0] * exp(-alpha * np.sum(r**2))
-
-    def p_y(self, alpha, r):
-        return r[1] * exp(-alpha * np.sum(r**2))
-
-    def p_z(self, alpha, r):
-        return r[2] * exp(-alpha * np.sum(r**2))
-
-    def wfn(self, r, fn):
-        return sum(self.coeffs[i] * fn(self.primitives[i], r) for i in range(self.nprimitives))
+    def wfn(self, r, mo):
+        begin = end = 0
+        res = list()
+        for i, shell_type in enumerate(self.shell_types):
+            end += self.primitives[i]
+            res.append(self.gaussian_wfn(shell_type, self.contraction_coefficients[begin:end], self.exponents[begin:end], r))
+            begin += self.primitives[i]
+        print(res)
 
 
 def main():
@@ -120,9 +155,9 @@ def main():
 
     args = parser.parse_args()
     gwfn = Gwfn(args.gwfn_file)
-    r = np.array([1,1,1])
-    print(gwfn.wfn(r, gwfn.s))
-    print(gwfn.atoms)
+    r = np.array([[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]])
+    print(gwfn.wfn(r, gwfn.mo[0]))
+
 
 if __name__ == "__main__":
     main()
