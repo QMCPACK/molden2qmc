@@ -129,6 +129,21 @@ class Gwfn:
         return np.einsum('i...,j...->j...', radial, harmonic)
 
     def wfn(self, r, mo):
+        """
+        ao - array[self.nbasis_functions]
+        angular part of spherical harmonic - array[self.nbasis_functions]
+        coeff - array[self.nprimitives]
+        np.exp(-alpha*r^2) - array[self.nprimitives]
+
+        r -> [3, a, b, c]
+        ao -> array[self.nbasis_functions]
+        coeff -> array[self.nbasis_functions, max_nprim_inbasis_wfn]
+        alpha -> array[self.nbasis_functions, max_nprim_inbasis_wfn]
+        coeff * np.exp(-alpha*r^2) -> array[self.nbasis_functions, max_nprim_inbasis_wfn, a, b, c]
+        angular part of spherical harmonic > array[self.nbasis_functions, a, b, c]
+
+        SUM along [self.nbasis_functions, max_nprim_inbasis_wfn]
+        """
         begin = end = 0
         res = list()
         for i, shell_type in enumerate(self.shell_types):
