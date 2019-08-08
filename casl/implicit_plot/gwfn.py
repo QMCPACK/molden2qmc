@@ -72,22 +72,18 @@ class Gwfn:
                     self.primitives = read_ints(self.nshell)
                 elif line.startswith('Exponents of Gaussian primitives'):
                     tail = read_floats(self.nprimitives)
-                    self.exponents = np.zeros((self.nbasis_functions, max(self.primitives)))
-                    n = 0
+                    res = []
                     for primitive, shell_type in zip(self.primitives, self.shell_types):
                         head, tail = tail[:primitive], tail[primitive:]
-                        for j in range(self.shell_map[shell_type]):
-                            self.exponents[n, :primitive] = head
-                            n += 1
+                        res.extend([head + [0] * (max(self.primitives) - primitive)] * self.shell_map[shell_type])
+                    self.exponents = np.array(res)
                 elif line.startswith('Normalized contraction coefficients'):
                     tail = read_floats(self.nprimitives)
-                    self.contraction_coefficients = np.zeros((self.nbasis_functions, max(self.primitives)))
-                    n = 0
+                    res = []
                     for primitive, shell_type in zip(self.primitives, self.shell_types):
                         head, tail = tail[:primitive], tail[primitive:]
-                        for j in range(self.shell_map[shell_type]):
-                            self.contraction_coefficients[n, :primitive] = head
-                            n += 1
+                        res.extend([head + [0] * (max(self.primitives) - primitive)] * self.shell_map[shell_type])
+                    self.contraction_coefficients = np.array(res)
                 # ORBITAL COEFFICIENTS
                 # --------------------
                 elif line.startswith('ORBITAL COEFFICIENTS'):
