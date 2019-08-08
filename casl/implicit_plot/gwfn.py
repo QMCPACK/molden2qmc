@@ -91,51 +91,49 @@ class Gwfn:
                     mo = read_floats(self.nbasis_functions * self.nbasis_functions)
                     self.mo = np.array(mo).reshape((self.nbasis_functions, self.nbasis_functions))
 
-    @staticmethod
-    def angular_part(shell_type, r):
+    def angular_part(self, r):
         """
-        from CASINO/examples/generic/gauss_dfg/README
-        :param shell_type: shell types (s/sp/p/d/f... 1/2/3/4/5...)
         :param r: electron coordinates with shape (3, n, m, l, ...)
         :return:
         """
-        harmonic = np.array([0])
-        if shell_type == 1:
-            harmonic = np.array([1])
-        if shell_type == 3:
-            harmonic = np.array(r)
+        harmonic = []
         x, y, z = r
-        if shell_type == 4:
-            harmonic = np.array([
-                       3 * z**2 - r**2,
-                       x * z,
-                       y * z,
-                       x**2 + y**2,
-                       x * y
-                   ])
-        if shell_type == 5:
-            harmonic = np.array([
-                       z * (5 * z**2 - 3 * r**2) / 2,
-                       3 * x * (5 * z**2 - 3 * r**2) / 2,
-                       3 * y * (5 * z**2 - 3 * r**2) / 2,
-                       15 * z * (x**2 - y**2),
-                       30 * x * y * z,
-                       15 * x * (x**2 - 3 * y**2),
-                       15 * y * (3 * x**2 - y*2),
-                   ])
-        if shell_type == 6:
-            harmonic = np.array([
-                       (35 * z*z*z*z - 30 * z*z*r**2 + 3 * r**4) / 8,
-                       5 * x * z * (7 * z * z - 3 * r**2) / 2,
-                       5 * y * z * (7 * z * z - 3 * r**2) / 2,
-                       15 * (x*x - y*y) * (7 * z * z - r**2) / 2,
-                       30 * x * y * (7 * z * z - r**2) / 2,
-                       105 * x * z * (x*x - 3 * y*y),
-                       105 * y * z * (3 * x*x - y*y),
-                       105 * (x*x*x*x - 6 * x*x*y*y + y*y*y*y),
-                       420 * x * y * (x*x - y*y)
-                   ])
-        return np.einsum('i...,j...->j...', radial, harmonic)
+        for shell_type in self.shell_types:
+            if shell_type == 1:
+                harmonic.extend([0*x+1])
+            if shell_type == 3:
+                harmonic.extend([x, y, z])
+            if shell_type == 4:
+                harmonic.extend([
+                           3 * z**2 - r**2,
+                           x * z,
+                           y * z,
+                           x**2 + y**2,
+                           x * y
+                       ])
+            if shell_type == 5:
+                harmonic.extend([
+                           z * (5 * z**2 - 3 * r**2) / 2,
+                           3 * x * (5 * z**2 - 3 * r**2) / 2,
+                           3 * y * (5 * z**2 - 3 * r**2) / 2,
+                           15 * z * (x**2 - y**2),
+                           30 * x * y * z,
+                           15 * x * (x**2 - 3 * y**2),
+                           15 * y * (3 * x**2 - y*2),
+                       ])
+            if shell_type == 6:
+                harmonic.extend([
+                           (35 * z*z*z*z - 30 * z*z*r**2 + 3 * r**4) / 8,
+                           5 * x * z * (7 * z * z - 3 * r**2) / 2,
+                           5 * y * z * (7 * z * z - 3 * r**2) / 2,
+                           15 * (x*x - y*y) * (7 * z * z - r**2) / 2,
+                           30 * x * y * (7 * z * z - r**2) / 2,
+                           105 * x * z * (x*x - 3 * y*y),
+                           105 * y * z * (3 * x*x - y*y),
+                           105 * (x*x*x*x - 6 * x*x*y*y + y*y*y*y),
+                           420 * x * y * (x*x - y*y)
+                       ])
+        return np.moveaxis(np.array(harmonic), 0, -1)
 
     def wfn(self, r, mo):
         """
@@ -153,9 +151,9 @@ class Gwfn:
 
         SUM along [self.nbasis_functions, max_nprim_inbasis_wfn]
         """
-        r2 = np.sum(r**2, axis=0)[:, :, np.newaxis, np.newaxis]
+        r2 = np.sum(r**2, axis=0)[:, np.newaxis, np.newaxis]
         radial = np.sum(self.contraction_coefficients * np.exp(-self.exponents * r2), axis=-1)
-        angular = mo[0]
+        angular = mo[0] * self.angular_part(r)
         return np.sum(angular * radial, axis=-1)
 
 
@@ -175,7 +173,7 @@ def main():
 
     args = parser.parse_args()
     gwfn = Gwfn(args.gwfn_file)
-    r = np.array([[[0, 1, 2, 3], [0, 1, 2, 3]], [[0, 1, 2, 3], [0, 1, 2, 3]], [[0, 1, 2, 3], [0, 1, 2, 3]]])
+    r = np.array([[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]])
     print(gwfn.wfn(r, gwfn.mo[0]))
 
 
