@@ -100,7 +100,7 @@ class Gwfn:
         x, y, z = r
         for shell_type in self.shell_types:
             if shell_type == 1:
-                harmonic.extend([0*x+1])
+                harmonic.extend([np.ones(shape=x.shape)])
             if shell_type == 3:
                 harmonic.extend([x, y, z])
             if shell_type == 4:
@@ -153,7 +153,7 @@ class Gwfn:
         """
         r2 = np.sum(r**2, axis=0)[:, np.newaxis, np.newaxis]
         radial = np.sum(self.contraction_coefficients * np.exp(-self.exponents * r2), axis=-1)
-        angular = mo[0] * self.angular_part(r)
+        angular = mo * self.angular_part(r)
         return np.sum(angular * radial, axis=-1)
 
 
