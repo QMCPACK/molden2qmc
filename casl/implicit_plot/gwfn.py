@@ -87,9 +87,9 @@ class Gwfn:
                 # ORBITAL COEFFICIENTS
                 # --------------------
                 elif line.startswith('ORBITAL COEFFICIENTS'):
-                    line = fp.readline()
-                    mo = read_floats(self.nbasis_functions * self.nbasis_functions)
-                    self.mo = np.array(mo).reshape((self.nbasis_functions, self.nbasis_functions))
+                    fp.readline()  # skip line
+                    mo = read_floats((self.unrestricted + 1) * self.nbasis_functions * self.nbasis_functions)
+                    self.mo = np.array(mo).reshape(self.unrestricted + 1, self.nbasis_functions, self.nbasis_functions)
 
     def angular_part(self, r):
         """
@@ -136,7 +136,7 @@ class Gwfn:
                        ])
         return np.moveaxis(np.array(harmonic), 0, -1)
 
-    def wfn(self, r, i):
+    def wfn(self, r, ao, spin):
         """
         ao - array[self.nbasis_functions]
         angular part of spherical harmonic - array[self.nbasis_functions]
@@ -154,7 +154,13 @@ class Gwfn:
         """
         r2 = np.sum(r**2, axis=0)[..., np.newaxis, np.newaxis]
         radial = np.sum(self.contraction_coefficients * np.exp(-self.exponents * r2), axis=-1)
-        angular = self.mo[i] * self.angular_part(r)
+        if self.unrestricted:
+            if spin == 'up':
+                angular = self.mo[0, ao] * self.angular_part(r)
+            else:
+                angular = self.mo[1, ao] * self.angular_part(r)
+        else:
+            angular = self.mo[0, ao] * self.angular_part(r)
         return np.sum(angular * radial, axis=-1)
 
 
@@ -175,7 +181,8 @@ def main():
     args = parser.parse_args()
     gwfn = Gwfn(args.gwfn_file)
     r = np.array([[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]])
-    print(gwfn.wfn(r, 0))
+    print(gwfn.wfn(r, 0, 'up'))
+    print(gwfn.wfn(r, 0, 'down'))
 
 
 if __name__ == "__main__":

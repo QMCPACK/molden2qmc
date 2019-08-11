@@ -14,7 +14,7 @@ def slater_1s(r):
 
 
 def slater_2s(r):
-    Z = 1.95
+    Z = 3.00
     return np.sqrt(Z**5/(3*np.pi)) * norm(r, axis=0) * np.exp(-Z*norm(r, axis=0))
 
 
@@ -55,11 +55,12 @@ def Be_1s2pz(r1, r2):
 
 def Be(r12_minus, r34_minus, r12_plus):
     u"""HF = |1s(r1)2s(r2)| * |1s(r3)2s(r4)|"""
-    r12_plus = r12_plus + 3.0
+    # r12_plus = r12_plus + 3.0
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
     phi = np.pi/4.0
-    vec_2 = vec_4 = np.array([np.cos(phi), np.sin(phi), 0])[:, np.newaxis, np.newaxis]
+    theta = np.pi/2.0
+    vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])[:, np.newaxis, np.newaxis]
     r1n = (r12_plus + r12_minus)/2.0
     r2n = (r12_plus - r12_minus)/2.0
     r1 = vec_1 * r1n[np.newaxis]
@@ -73,10 +74,11 @@ def Be(r12_minus, r34_minus, r12_plus):
 
 def Be_4det(r12_minus, r34_minus, r12_plus):
     u"""CI = phi(1s2, 2s2) + C * phi(1s2, 2p2)"""
+    # r12_plus = r12_plus + 3.0
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
-    phi = 0 #np.pi/2.0
-    theta = 0 #np.pi/2.0
+    phi = np.pi/4.0
+    theta = np.pi/2.0
     vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])[:, np.newaxis, np.newaxis]
     C = -0.15
     r1n = (r12_plus + r12_minus)/2.0
@@ -118,6 +120,6 @@ def Be_4det_theta(r12_minus, r34_minus, theta):
 
 
 if __name__ == '__main__':
-    #plot_implicit(Be)
-    plot_implicit(Be_4det)
+    plot_implicit(Be)
+    #plot_implicit(Be_4det)
     #plot_implicit(Be_4det_theta)
