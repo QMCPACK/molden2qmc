@@ -9,27 +9,27 @@ import numpy as np
 
 # http://www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
 def slater_1s(r):
-    Z = 3
+    Z = 3.7
     return np.sqrt(Z**3/np.pi) * np.exp(-Z*norm(r, axis=0))
 
 
 def slater_2s(r):
-    Z = 3
+    Z = 1.95
     return np.sqrt(Z**5/(3*np.pi)) * norm(r, axis=0) * np.exp(-Z*norm(r, axis=0))
 
 
 def slater_2px(r):
-    Z = 2
+    Z = 1.85
     return np.sqrt(Z**5/np.pi) * r[0] * np.exp(-Z*norm(r, axis=0))
 
 
 def slater_2py(r):
-    Z = 2
+    Z = 1.85
     return np.sqrt(Z**5/np.pi) * r[1] * np.exp(-Z*norm(r, axis=0))
 
 
 def slater_2pz(r):
-    Z = 2
+    Z = 1.85
     return np.sqrt(Z**5/np.pi) * r[2] * np.exp(-Z*norm(r, axis=0))
 
 
@@ -75,8 +75,8 @@ def Be_4det(r12_minus, r34_minus, r12_plus):
     u"""CI = phi(1s2, 2s2) + C * phi(1s2, 2p2)"""
     r34_plus = np.full((100, 100), 6.0)
     vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
-    phi = np.pi/4.0
-    theta = np.pi/2.0
+    phi = 0 #np.pi/2.0
+    theta = 0 #np.pi/2.0
     vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])[:, np.newaxis, np.newaxis]
     C = -0.15
     r1n = (r12_plus + r12_minus)/2.0
