@@ -90,5 +90,5 @@ def Be_4det(r12_minus, r34_minus, r12_plus):
 
 
 if __name__ == '__main__':
-    #plot_implicit(Be)
-    plot_implicit(Be_4det)
+    plot_implicit(Be)
+    #plot_implicit(Be_4det)
