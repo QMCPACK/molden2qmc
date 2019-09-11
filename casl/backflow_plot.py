@@ -330,7 +330,7 @@ class Plot1D(Backflow):
         """
         return np.linspace(self.x_min, self.x_max, self.x_steps)
 
-    def backflow(self, grid, channel, set):
+    def backflow(self, grid, channel, set=None):
         """Backflow.
         :param grid: electron positions
         :param channel: [u] or [d]
