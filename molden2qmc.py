@@ -8,7 +8,7 @@ from itertools import combinations
 from operator import itemgetter, mul
 from functools import reduce
 
-__version__ = '4.0.3'
+__version__ = '4.0.4'
 
 
 def fact2(k):
@@ -910,9 +910,7 @@ class Turbomole(DefaultConverter):
 
 class CFour(DefaultConverter):
     """
-    CFour 2.0 beta
-    In order to get the correct MOLDEN file recompile Cfour with modified reorderedf.f
-    https://github.com/Konjkov/molden2qmc/blob/master/test/CFOUR/reorderdf.f
+    CFour 2.1
     """
     title = "generated from CFour output data."
 
