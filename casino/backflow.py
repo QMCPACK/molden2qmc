@@ -17,7 +17,7 @@ class Backflow:
     http://www.tcm.phy.cam.ac.uk/~mdt26/downloads/lopezrios_backflow.pdf
     """
 
-    def __init__(self):
+    def __init__(self, file):
         """Init."""
         self.ETA_TERM = None
         self.MU_TERM = []
@@ -35,6 +35,7 @@ class Backflow:
         self.PHI_en_order = []
         self.PHI_spin_dep = []
         self.AE_L = None
+        self.read(file)
 
     def ETA_powers(self):
         """Generates ETA polynomial powers."""

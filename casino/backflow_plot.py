@@ -22,12 +22,11 @@ class Plot1D(Backflow):
 
     def __init__(self, term, file):
         """Initialize plotter.
-        :param term: term to plot (ETA, MU)
-        :param file: backflow data file.
+        :param term: term to plot (ETA, MU, PHI, THETA, ALL)
+        :param file: backflow data file (correlation.data).
         """
-        super().__init__()
+        super().__init__(file)
         self.term = term
-        self.read(file)
         self.x_min = 0.0
         self.x_max = 10.0
         self.x_steps = 101
