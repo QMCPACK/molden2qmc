@@ -1,0 +1,45 @@
+ START HEADER
+ No title given.
+ END HEADER
+
+ START VERSION
+   1
+ END VERSION
+
+ START BACKFLOW
+ Title
+ title
+ Truncation order
+   3
+ START ETA TERM
+ Expansion order
+   3
+ Spin dep (0->uu=dd=ud; 1->uu=dd/=ud; 2->uu/=dd/=ud)
+   1
+ Cut-off radii ;      Optimizable (0=NO; 1=YES; 2=YES BUT NO SPIN-DEP)
+   3.1837160212759326                1       ! L_1
+   8.0492494512490964                1       ! L_2
+ Parameter ;          Optimizable (0=NO; 1=YES)
+  -2.7887505306620208E-002           1       ! c_0,1
+   5.6277698103274258E-002           1       ! c_2,1
+  -1.4391090532447375E-002           1       ! c_3,1
+  -5.9277921455069549E-003           1       ! c_0,2
+   1.5266617691115578E-002           1       ! c_1,2
+  -6.3989803624144989E-003           1       ! c_2,2
+   8.7970509759535155E-004           1       ! c_3,2
+ END ETA TERM
+ START AE CUTOFFS
+ Nucleus ; Set ; Cutoff length     ;  Optimizable (0=NO; 1=YES)
+  1         1     0.20000000000000001                0
+ END AE CUTOFFS
+ END BACKFLOW
+
+ START MDET
+ Title
+ multideterminant WFN Single determinant.
+ Multideterminant/excitation specification (see manual)
+ MD
+   1                                  ! Number of dets
+   1.0000000000000000        1   0      ! c_1 ; label ; opt-flag
+ END MDET
+
