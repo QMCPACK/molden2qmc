@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import argparse
 import numpy as np
+from numpy.linalg import norm, det
 
 
 class Gwfn:
@@ -136,15 +136,20 @@ class Gwfn:
                        ])
         return np.moveaxis(np.array(harmonic), 0, -1)
 
-    def wfn(self, r, ao, spin):
-        """
+    def mo_wfn(self, r, mo, spin):
+        """MO-wfn on grid.
+
+        param r: coordinat grid - ndarray(dims=(3, a, b, c))
+        param mo: MO-number 0..n
+        param spin: [ up | down ]
+
         ao - array[self.nbasis_functions]
         angular part of spherical harmonic - array[self.nbasis_functions]
         coeff - array[self.nprimitives]
         np.exp(-alpha*r^2) - array[self.nprimitives]
 
         r -> [3, a, b, c]
-        ao -> array[self.nbasis_functions]
+        mo -> array[self.nbasis_functions]
         coeff -> array[self.nbasis_functions, max_nprim_inbasis_wfn]
         alpha -> array[self.nbasis_functions, max_nprim_inbasis_wfn]
         coeff * np.exp(-alpha*r^2) -> array[self.nbasis_functions, max_nprim_inbasis_wfn, a, b, c]
@@ -156,34 +161,38 @@ class Gwfn:
         radial = np.sum(self.contraction_coefficients * np.exp(-self.exponents * r2), axis=-1)
         if self.unrestricted:
             if spin == 'up':
-                angular = self.mo[0, ao] * self.angular_part(r)
+                angular = self.mo[0, mo] * self.angular_part(r)
             else:
-                angular = self.mo[1, ao] * self.angular_part(r)
+                angular = self.mo[1, mo] * self.angular_part(r)
         else:
-            angular = self.mo[0, ao] * self.angular_part(r)
+            angular = self.mo[0, mo] * self.angular_part(r)
         return np.sum(angular * radial, axis=-1)
 
+    def Be_1s2s(self, r1, r2, r3, r4):
+        """HF = |1s(r1)2s(r2)| * |1s(r3)2s(r4)|"""
+        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 1, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 1, 'up')
+        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 1, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 1, 'down')
+        return alpha * beta
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="This script to read gwfn.data file.",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    def Be_1s2px(self, r1, r2, r3, r4):
+        """HF = |1s(r1)2px(r2)| * |1s(r3)2px(r4)|"""
+        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 2, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 2, 'up')
+        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 2, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 2, 'down')
+        return alpha * beta
 
-    parser.add_argument(
-        'gwfn_file',
-        type=str,
-        default='gwfn.data',
-        nargs='?',
-        help="name of correlation.* file"
-    )
+    def Be_1s2py(self, r1, r2, r3, r4):
+        """HF = |1s(r1)2py(r2)| * |1s(r3)2py(r4)|"""
+        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 3, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 3, 'up')
+        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 3, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 3, 'down')
+        return alpha * beta
 
-    args = parser.parse_args()
-    gwfn = Gwfn(args.gwfn_file)
-    r = np.array([[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]])
-    print(gwfn.wfn(r, 0, 'up'))
-    print(gwfn.wfn(r, 0, 'down'))
+    def Be_1s2pz(self, r1, r2, r3, r4):
+        """HF = |1s(r1)2pz(r2)| * |1s(r3)2pz(r4)|"""
+        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 4, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 4, 'up')
+        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 4, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 4, 'down')
+        return alpha * beta
 
-
-if __name__ == "__main__":
-    main()
+    def Be_4det(self, *args):
+        """CASSCF(2,4) = phi(1s2, 2s2) + C * phi(1s2, 2p2)"""
+        C = -0.18
+        return self.Be_1s2s(*args) + C * self.Be_1s2px(*args) + C * self.Be_1s2py(*args) + C * self.Be_1s2pz(*args)

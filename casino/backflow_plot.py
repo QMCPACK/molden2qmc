@@ -83,7 +83,7 @@ class Plot2D(Backflow):
         :param term: term to plot (PHI, THETA, ALL)
         :param file: backflow data file.
         """
-        super().__init__()
+        super().__init__(file)
         self.plot_type = 0
         self.plot_3d_type = 0
         self.channel_3D = 0
