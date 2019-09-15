@@ -123,7 +123,7 @@ class Plot2D(Backflow):
             self.y_steps = 25
             x = np.linspace(self.x_min, self.x_max, self.x_steps)
             y = np.linspace(self.y_min, self.y_max, self.y_steps)
-            return np.meshgrid(x, y, indexing=indexing)
+            return np.array(np.meshgrid(x, y, indexing=indexing))
         elif self.plot_type == 2:
             if indexing == 'xy':
                 self.x_steps = 10
@@ -132,7 +132,7 @@ class Plot2D(Backflow):
                 theta = np.linspace(0, 2*np.pi, self.y_steps)
                 x = r * np.cos(theta)
                 y = r * np.sin(theta)
-                return x, y
+                return np.array([x, y])
             elif indexing == 'ij':
                 self.x_steps = 25
                 self.y_steps = 10
@@ -140,11 +140,11 @@ class Plot2D(Backflow):
                 r = np.linspace(0, self.x_max, self.y_steps)
                 x = r * np.cos(theta)
                 y = r * np.sin(theta)
-                return x, y
+                return np.array([x, y])
 
     def grid_3D(self, indexing='xy'):
         """First electron positions (grid).
-        :return:
+        :return: ndarray(dims=(3, a, b, c))
         """
         self.x_steps = 100
         self.y_steps = 100
@@ -154,7 +154,7 @@ class Plot2D(Backflow):
         self.z_max = 2*self.max_L/(self.x_steps-1)
         self.z_min = - self.z_max
         z = np.linspace(self.z_min, self.z_max, self.z_steps)
-        return np.meshgrid(x, y, z, indexing=indexing)
+        return np.array(np.meshgrid(x, y, z, indexing=indexing))
 
     def backflow(self, grid, ri_spin, rj_spin, set=0):
         """Backflow.

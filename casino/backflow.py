@@ -348,8 +348,9 @@ class Backflow:
 
     def Be(self, r1, r2, r3, r4):
         """Be backflow"""
-        r1 = r1 + self.ALL(r1, r2, [0, 0, 0], 0, 0, 0) + self.ALL(r1, r3, [0, 0, 0], 1, 0, 0) + self.ALL(r1, r4, [0, 0, 0], 1, 0, 0)
-        r2 = r2 + self.ALL(r2, r1, [0, 0, 0], 0, 0, 0) + self.ALL(r2, r3, [0, 0, 0], 1, 0, 0) + self.ALL(r2, r4, [0, 0, 0], 1, 0, 0)
-        r3 = r3 + self.ALL(r3, r4, [0, 0, 0], 0, 0, 0) + self.ALL(r3, r1, [0, 0, 0], 0, 0, 0) + self.ALL(r3, r2, [0, 0, 0], 0, 0, 0)
-        r4 = r4 + self.ALL(r4, r3, [0, 0, 0], 0, 0, 0) + self.ALL(r4, r1, [0, 0, 0], 0, 0, 0) + self.ALL(r4, r2, [0, 0, 0], 0, 0, 0)
+        rI = ([0, 0, 0])
+        r1 = r1 + self.ALL(r1, r2, rI, 0, 0, 0) + self.ALL(r1, r3, rI, 1, 0, 0) + self.ALL(r1, r4, rI, 1, 0, 0)
+        r2 = r2 + self.ALL(r2, r1, rI, 0, 0, 0) + self.ALL(r2, r3, rI, 1, 0, 0) + self.ALL(r2, r4, rI, 1, 0, 0)
+        r3 = r3 + self.ALL(r3, r4, rI, 0, 0, 0) + self.ALL(r3, r1, rI, 0, 0, 0) + self.ALL(r3, r2, rI, 0, 0, 0)
+        r4 = r4 + self.ALL(r4, r3, rI, 0, 0, 0) + self.ALL(r4, r1, rI, 0, 0, 0) + self.ALL(r4, r2, rI, 0, 0, 0)
         return r1, r2, r3, r4
