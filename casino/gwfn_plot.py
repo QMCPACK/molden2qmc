@@ -4,10 +4,11 @@ import argparse
 import numpy as np
 
 from plot_implicit import plot_implicit
+from backflow import Backflow
 from gwfn import Gwfn
 
 
-def Be_plot(wfn):
+def Be_plot(wfn, bf):
 
     def plot(r12_minus, r34_minus, r12_plus):
         """
@@ -20,13 +21,13 @@ def Be_plot(wfn):
         vec_2 = vec_4 = np.array([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])[:, np.newaxis, np.newaxis]
         r1I = (r12_plus + r12_minus)/2.0
         r2I = (r12_plus - r12_minus)/2.0
-        r1 = vec_1 * r1_norm[np.newaxis]
-        r2 = vec_2 * r2_norm[np.newaxis]
+        r1 = vec_1 * r1I[np.newaxis]
+        r2 = vec_2 * r2I[np.newaxis]
         r3I = (r34_plus + r34_minus)/2.0
         r4I = (r34_plus - r34_minus)/2.0
         r3 = vec_3 * r3I[np.newaxis]
         r4 = vec_4 * r4I[np.newaxis]
-        return wfn(r1, r2, r3, r4)
+        return wfn(*bf(r1, r2, r3, r4))
 
     return plot
 
@@ -45,12 +46,21 @@ def main():
         help="name of gwfn.data file"
     )
 
+    parser.add_argument(
+        'backflow_file',
+        type=str,
+        default='correlation.out.9',
+        nargs='?',
+        help="name of correlation.data file"
+    )
+
     args = parser.parse_args()
 
     Be_gwfn = Gwfn(args.gwfn_file)
+    Be_backflow = Backflow(args.backflow_file)
 
-    if False:
-        fn = Be_plot(Be_gwfn.Be_1s2s)
+    if True:
+        fn = Be_plot(Be_gwfn.Be_1s2s, Be_backflow.Be)
     else:
         fn = Be_plot(Be_gwfn.Be_4det)
 

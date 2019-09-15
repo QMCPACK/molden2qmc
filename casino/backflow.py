@@ -85,9 +85,9 @@ class Backflow:
             PHI = PHI_params = PHI_set = False
             line = f.readline()
             eta_powers = self.ETA_powers()
-            mu_powers = self.MU_powers()
-            phi_powers = self.PHI_powers()
-            theta_powers = self.THETA_powers()
+            # mu_powers = self.MU_powers()
+            # phi_powers = self.PHI_powers()
+            # theta_powers = self.THETA_powers()
             while line:
                 line = f.readline()
                 if line.strip().startswith('START BACKFLOW'):
@@ -207,37 +207,50 @@ class Backflow:
         """All electron atom cutoff"""
         return np.where(r < L, (r/L)**2 * (6 - 8 * (r/L) + 3 * (r/L)**2), 1.0)
 
-    def ETA(self, ri, rj, rI_list, channel):
+    def ETA(self, ri, rj, rI_list, ri_spin, rj_spin):
         """ETA term.
+        Spin dep (0->uu=dd=ud; 1->uu=dd/=ud; 2->uu/=dd/=ud)
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rj: shape([1,2,3], n, m, l, ...)
         :param rI_list: list of shape([1,2,3], n, m, l, ...)
-        :param channel: u-u, u-d
+        :param ri_spin: 0 - up, 1 - down
+        :param rj_spin: 0 - up, 1 - down
         :return:
         """
         rij = norm(ri - rj, axis=0)
-        channel = min(self.ETA_spin_dep-1, channel)
-        result = (self.cutoff(rij, self.ETA_L[channel]) *
-                  polyval(rij, self.ETA_TERM[:, channel]))
+        if self.ETA_spin_dep == 1:
+            channel = 0
+        elif self.ETA_spin_dep == 2:
+            if ri_spin == rj_spin:
+                channel = 0
+            else:
+                channel = 1
+        elif self.ETA_spin_dep == 3:
+            if ri_spin == rj_spin == 0:
+                channel = 0
+            elif ri_spin == rj_spin == 1:
+                channel = 1
+            else:
+                channel = 2
+        result = self.cutoff(rij, self.ETA_L[channel]) * polyval(rij, self.ETA_TERM[:, channel])
         for rI in rI_list:
             riI = norm(ri - rI, axis=0)
             result *= self.AE_cutoff(riI, self.AE_L)
         return result * (rj - ri)
 
-    def MU(self, ri, rI_list, channel, set):
+    def MU(self, ri, rI_list, ri_spin, set):
         """MU term
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rI_list: list of shape([1,2,3], n, m, l, ...)
-        :param channel: u, d
-        :param set: 0, 1, 2
+        :param ri_spin: 0 - up, 1 - down
+        :param set: int
         :return:
         """
         result = 0
         for k, rI in enumerate(rI_list):
             riI = norm(ri - rI, axis=0)
-            channel = min(self.MU_spin_dep[set]-1, channel)
-            mu = self.cutoff(riI, self.MU_L[set])
-            mu *= polyval(riI, self.MU_TERM[set][:, channel])
+            channel = min(self.MU_spin_dep[set]-1, ri_spin)
+            mu = self.cutoff(riI, self.MU_L[set]) * polyval(riI, self.MU_TERM[set][:, channel])
             for l, rI_other in enumerate(rI_list):
                 if k != l:
                     riI_other = norm(ri - rI_other, axis=0)
@@ -245,17 +258,33 @@ class Backflow:
             result += mu * (rI - ri)
         return result
 
-    def PHI(self, ri, rj, rI_list, channel, set):
+    def PHI(self, ri, rj, rI_list, ri_spin, rj_spin, set):
         """PHI term
+        Spin dep (0->uu=dd=ud; 1->uu=dd/=ud; 2->uu/=dd/=ud)
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rj: shape([1,2,3], n, m, l, ...)
         :param rI_list: list of shape([1,2,3], n, m, l, ...)
-        :param channel: u, d
-        :param set: 0, 1, 2
+        :param ri_spin: 0 - up, 1 - down
+        :param rj_spin: 0 - up, 1 - down
+        :param set: int
         :return:
         """
         result = 1
         for rI in rI_list:
+            if self.PHI_spin_dep[set] == 1:
+                channel = 0
+            elif self.PHI_spin_dep[set] == 2:
+                if ri_spin == rj_spin:
+                    channel = 0
+                else:
+                    channel = 1
+            elif self.PHI_spin_dep[set] == 3:
+                if ri_spin == rj_spin == 0:
+                    channel = 0
+                elif ri_spin == rj_spin == 1:
+                    channel = 1
+                else:
+                    channel = 2
             rij = norm(ri - rj, axis=0)
             riI = norm(ri - rI, axis=0)
             rjI = norm(rj - rI, axis=0)
@@ -265,17 +294,33 @@ class Backflow:
                 result *= self.AE_cutoff(riI, self.AE_L)
         return result * (rj - ri)
 
-    def THETA(self, ri, rj, rI_list, channel, set):
+    def THETA(self, ri, rj, rI_list, ri_spin, rj_spin, set):
         """THETA term
+        Spin dep (0->uu=dd=ud; 1->uu=dd/=ud; 2->uu/=dd/=ud)
         :param ri: shape([1,2,3], n, m, l, ...)
         :param rj: shape([1,2,3], n, m, l, ...)
         :param rI_list: list of shape([1,2,3], n, m, l, ...)
-        :param channel: u, d
-                :param set: 0, 1, 2
+        :param ri_spin: 0 - up, 1 - down
+        :param rj_spin: 0 - up, 1 - down
+        :param set: 0, 1, 2
         :return:
         """
         result = 0
         for k, rI in enumerate(rI_list):
+            if self.PHI_spin_dep[set] == 1:
+                channel = 0
+            elif self.PHI_spin_dep[set] == 2:
+                if ri_spin == rj_spin:
+                    channel = 0
+                else:
+                    channel = 1
+            elif self.PHI_spin_dep[set] == 3:
+                if ri_spin == rj_spin == 0:
+                    channel = 0
+                elif ri_spin == rj_spin == 1:
+                    channel = 1
+                else:
+                    channel = 2
             rij = norm(ri - rj, axis=0)
             riI = norm(ri - rI, axis=0)
             rjI = norm(rj - rI, axis=0)
@@ -288,15 +333,23 @@ class Backflow:
             result += theta * (rI - ri)
         return result
 
-    def ALL(self, ri, rj, rI_list, channel, set):
+    def ALL(self, ri, rj, rI_list, ri_spin, rj_spin, set):
         """Total displacement"""
         result = 0
         if self.ETA_TERM is not None:
-            result += self.ETA(ri, rj, rI_list, channel)
+            result += self.ETA(ri, rj, rI_list, ri_spin, rj_spin)
         if self.MU_TERM:
-            result += self.MU(ri, rI_list, channel, set)
+            result += self.MU(ri, rI_list, ri_spin, set)
         if self.PHI_TERM is not None:
-            result += self.PHI(ri, rj, rI_list, channel, set)
+            result += self.PHI(ri, rj, rI_list, ri_spin, rj_spin, set)
             if not self.PHI_irrotational[set]:
-                result += self.THETA(ri, rj, rI_list, channel, set)
+                result += self.THETA(ri, rj, rI_list, ri_spin, rj_spin, set)
         return result
+
+    def Be(self, r1, r2, r3, r4):
+        """Be backflow"""
+        r1 = r1 + self.ALL(r1, r2, [0, 0, 0], 0, 0, 0) + self.ALL(r1, r3, [0, 0, 0], 1, 0, 0) + self.ALL(r1, r4, [0, 0, 0], 1, 0, 0)
+        r2 = r2 + self.ALL(r2, r1, [0, 0, 0], 0, 0, 0) + self.ALL(r2, r3, [0, 0, 0], 1, 0, 0) + self.ALL(r2, r4, [0, 0, 0], 1, 0, 0)
+        r3 = r3 + self.ALL(r3, r4, [0, 0, 0], 0, 0, 0) + self.ALL(r3, r1, [0, 0, 0], 0, 0, 0) + self.ALL(r3, r2, [0, 0, 0], 0, 0, 0)
+        r4 = r4 + self.ALL(r4, r3, [0, 0, 0], 0, 0, 0) + self.ALL(r4, r1, [0, 0, 0], 0, 0, 0) + self.ALL(r4, r2, [0, 0, 0], 0, 0, 0)
+        return r1, r2, r3, r4
