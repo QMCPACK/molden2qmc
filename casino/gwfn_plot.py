@@ -14,7 +14,7 @@ def Be_plot(wfn, bf):
         """
         """
         # r12_plus = r12_plus + 3.0
-        r34_plus = np.full((100, 100), 6.0)
+        r34_plus = np.full((100, 100), 1.0)
         vec_1 = vec_3 = np.array([1, 0, 0])[:, np.newaxis, np.newaxis]
         phi = np.pi/4.0
         theta = np.pi/2.0

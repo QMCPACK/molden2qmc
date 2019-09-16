@@ -13,21 +13,99 @@
    3
  START ETA TERM
  Expansion order
-   3
+   9
  Spin dep (0->uu=dd=ud; 1->uu=dd/=ud; 2->uu/=dd/=ud)
    1
  Cut-off radii ;      Optimizable (0=NO; 1=YES; 2=YES BUT NO SPIN-DEP)
-   3.1837160212759326                1       ! L_1
-   8.0492494512490964                1       ! L_2
+   2.7551973965119645                1       ! L_1
+   10.076787590994035                1       ! L_2
  Parameter ;          Optimizable (0=NO; 1=YES)
-  -2.7887505306620208E-002           1       ! c_0,1
-   5.6277698103274258E-002           1       ! c_2,1
-  -1.4391090532447375E-002           1       ! c_3,1
-  -5.9277921455069549E-003           1       ! c_0,2
-   1.5266617691115578E-002           1       ! c_1,2
-  -6.3989803624144989E-003           1       ! c_2,2
-   8.7970509759535155E-004           1       ! c_3,2
+  -1.8041336990189578E-002           1       ! c_0,1
+   5.8397868366337070E-002           1       ! c_2,1
+  -2.4824460693174018E-002           1       ! c_3,1
+  -7.3841170119107449E-003           1       ! c_4,1
+   4.3435180281177471E-003           1       ! c_5,1
+   3.5946952592423444E-003           1       ! c_6,1
+  -1.8310620480753124E-003           1       ! c_7,1
+  -1.8855922000450038E-004           1       ! c_8,1
+   1.4129134366453226E-004           1       ! c_9,1
+  -3.0209679306598858E-003           1       ! c_0,2
+   5.4720939946798801E-003           1       ! c_1,2
+  -1.4048880410816318E-003           1       ! c_2,2
+   2.0641710341767170E-004           1       ! c_3,2
+   2.3348005736512550E-005           1       ! c_4,2
+  -1.1112798048147334E-005           1       ! c_5,2
+  -1.2810771153985315E-006           1       ! c_6,2
+   3.8716707929741146E-007           1       ! c_7,2
+   7.6547304852435530E-008           1       ! c_8,2
+  -1.2041640968116096E-008           1       ! c_9,2
  END ETA TERM
+ START MU TERM
+ Number of sets ; labelling (1->atom in s. cell; 2->atom in p. cell; 3->species)
+   1 1
+ START SET 1
+ Number of atoms in set
+   1
+ Label of the atom in this set
+    1
+ Type of e-N cusp conditions (0->PP/cuspless AE; 1->AE with cusp)
+   1
+ Expansion order
+   9
+ Spin dep (0->u=d; 1->u/=d)
+   0
+ Cutoff (a.u.)     ;  Optimizable (0=NO; 1=YES)
+   7.2176533067570512                1
+ Parameter values  ;  Optimizable (0=NO; 1=YES)
+  -1.0279419121065418E-002           1       ! mu_2,1
+   3.1120552743327798E-002           1       ! mu_3,1
+  -1.5922883089386909E-003           1       ! mu_4,1
+  -1.0612516483336448E-003           1       ! mu_5,1
+  -1.4774701487410872E-004           1       ! mu_6,1
+  -6.5182047839099359E-006           1       ! mu_7,1
+   1.3907601685865117E-006           1       ! mu_8,1
+   4.7510572185741949E-007           1       ! mu_9,1
+ END SET 1
+ END MU TERM
+ START PHI TERM
+ Number of sets ; labelling (1->atom in s. cell; 2->atom in p. cell; 3->species)
+   1 1
+ START SET 1
+ Number of atoms in set
+   1
+ Label of the atom in this set
+    1
+ Type of e-N cusp conditions (0=PP; 1=AE)
+   1
+ Irrotational Phi term (0=NO; 1=YES)
+   0
+ Electron-nucleus expansion order N_eN
+   2
+ Electron-electron expansion order N_ee
+   2
+ Spin dep (0->uu=dd=ud; 1->uu=dd/=ud; 2->uu/=dd/=ud)
+   1
+ Cutoff (a.u.)     ;  Optimizable (0=NO; 1=YES)
+   6.0420391626870105                1
+ Parameter values  ;  Optimizable (0=NO; 1=YES)
+   3.0890010551712071E-002           1       ! phi_2,2,0,1
+  -1.3444051664671774E-003           1       ! phi_2,2,2,1
+  -4.4716145288689224E-002           1       ! theta_2,1,0,1
+   1.5621368664088876E-002           1       ! theta_2,2,0,1
+  -3.0909310913011497E-003           1       ! theta_1,1,2,1
+  -2.9495211090156724E-004           1       ! theta_2,2,2,1
+   8.8217978460423480E-002           1       ! phi_2,2,0,2
+   5.4149429322599418E-002           1       ! phi_1,1,1,2
+  -2.0488701199978390E-002           1       ! phi_2,2,1,2
+   3.6925721565883238E-002           1       ! phi_0,0,2,2
+  -1.7224256173517142E-002           1       ! phi_1,1,2,2
+   1.9663121983843563E-003           1       ! phi_2,2,2,2
+  -3.8686263560686641E-002           1       ! theta_2,1,0,2
+  -7.7200667713457855E-004           1       ! theta_2,2,0,2
+  -2.2101512959247453E-003           1       ! theta_1,1,2,2
+  -1.9894023801916030E-003           1       ! theta_2,2,2,2
+ END SET 1
+ END PHI TERM
  START AE CUTOFFS
  Nucleus ; Set ; Cutoff length     ;  Optimizable (0=NO; 1=YES)
   1         1     0.20000000000000001                0
