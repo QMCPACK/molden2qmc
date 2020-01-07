@@ -8,7 +8,7 @@ from backflow import Backflow
 from gwfn import Gwfn
 
 
-def Be_plot(wfn, bf):
+def Be_plot(wfn, bf=None):
 
     def plot(r12_minus, r34_minus, r12_plus):
         """
@@ -27,7 +27,10 @@ def Be_plot(wfn, bf):
         r4I = (r34_plus - r34_minus)/2.0
         r3 = vec_3 * r3I[np.newaxis]
         r4 = vec_4 * r4I[np.newaxis]
-        return wfn(*bf(r1, r2, r3, r4))
+        if bf:
+            return wfn(*bf(r1, r2, r3, r4))
+        else:
+            return wfn(r1, r2, r3, r4)
 
     return plot
 

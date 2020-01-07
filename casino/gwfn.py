@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from numpy.linalg import norm, det
 
 
 class Gwfn:
@@ -10,7 +9,7 @@ class Gwfn:
     # shell types (s/sp/p/d/f... 1/2/3/4/5...) -> 2l+1
     shell_map = {1: 1, 2: 3, 3: 3, 4: 5, 5: 7, 6: 9}
 
-    def __init__(self, file_name, mult=1):
+    def __init__(self, file_name):
         """Open file and read gwfn data."""
         def read_bool():
             return fp.readline().strip() == '.true.'
@@ -46,6 +45,8 @@ class Gwfn:
                 # ----------
                 elif line.startswith('Spin unrestricted'):
                     self.unrestricted = read_bool()
+                elif line.startswith('nuclear-nuclear repulsion energy'):
+                    self.repulsion = read_float()
                 elif line.startswith('Number of electrons'):
                     self.nelec = read_int()
                 # GEOMETRY
@@ -56,6 +57,8 @@ class Gwfn:
                     self.atoms = read_floats(self.natom * 3)
                 elif line.startswith('Atomic numbers for each atom'):
                     self.atom_numbers = read_ints(self.natom)
+                elif line.startswith('Valence charges for each atom'):
+                    self.atom_charges = read_floats(self.natom)
                 # BASIS SET
                 # ---------
                 elif line.startswith('Number of Gaussian centres'):
@@ -66,10 +69,14 @@ class Gwfn:
                     self.nbasis_functions = read_int()
                 elif line.startswith('Number of Gaussian primitives'):
                     self.nprimitives = read_int()
+                elif line.startswith('Highest shell angular momentum'):
+                    self.highest_ang = read_int()
                 elif line.startswith('Code for shell types'):
                     self.shell_types = read_ints(self.nshell)
                 elif line.startswith('Number of primitive Gaussians in each shell'):
                     self.primitives = read_ints(self.nshell)
+                elif line.startswith('Sequence number of first shell on each centre'):
+                    self.first_shells = read_ints(self.natom)
                 elif line.startswith('Exponents of Gaussian primitives'):
                     tail = read_floats(self.nprimitives)
                     res = []
@@ -84,6 +91,12 @@ class Gwfn:
                         head, tail = tail[:primitive], tail[primitive:]
                         res.extend([head + [0] * (max(self.primitives) - primitive)] * self.shell_map[shell_type])
                     self.contraction_coefficients = np.array(res)
+                elif line.startswith('Position of each shell (au)'):
+                    shell_positions = read_floats(3 * self.nshell)
+                    res = []
+                    for shell, shell_type in enumerate(self.shell_types):
+                        res.extend(shell_positions[shell*3:(shell+1)*3] * self.shell_map[shell_type])
+                    self.basis_positions = np.array(res).reshape(3, self.nbasis_functions)
                 # ORBITAL COEFFICIENTS
                 # --------------------
                 elif line.startswith('ORBITAL COEFFICIENTS'):
@@ -167,6 +180,19 @@ class Gwfn:
         else:
             angular = self.mo[0, mo] * self.angular_part(r)
         return np.sum(angular * radial, axis=-1)
+
+    def coulomb(self, r):
+        """Coulomb attraction between the electron and nucleus on grid.
+
+        param r: coordinat grid - ndarray(dims=(3, a, b, c))
+        param mo: MO-number 0..n
+        param spin: [ up | down ]
+        """
+        res = 0.0
+        for position, charge in zip(self.atoms, self.atom_charges):
+            rI = np.sqrt(np.sum((r - position)**2, axis=0))
+            res -= charge / rI
+        return res
 
     def Be_1s2s(self, r1, r2, r3, r4):
         """HF = |1s(r1)2s(r2)| * |1s(r3)2s(r4)|"""
