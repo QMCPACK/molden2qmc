@@ -132,8 +132,8 @@ class Gwfn:
                            3 * y * (5 * z**2 - 3 * r2) / 2,
                            15 * z * (x**2 - y**2),
                            30 * x * y * z,
-                           15 * x * (x**2 - 3 * y**2),
-                           15 * y * (3 * x**2 - y*2),
+                           15 * x * (x**2 - 3 * x*y),
+                           15 * y * (3 * x*y - y*2),
                        ])
             if shell_type == 6:
                 harmonic.extend([
@@ -149,12 +149,11 @@ class Gwfn:
                        ])
         return np.moveaxis(np.array(harmonic), 0, -1)
 
-    def mo_wfn(self, r, mo, spin):
+    def mo_wfn(self, r, mo):
         """MO-wfn on grid.
 
         param r: coordinat grid - ndarray(dims=(3, a, b, c))
-        param mo: MO-number 0..n
-        param spin: [ up | down ]
+        param mo: MO-orbital
 
         ao - array[self.nbasis_functions]
         angular part of spherical harmonic - array[self.nbasis_functions]
@@ -172,13 +171,7 @@ class Gwfn:
         """
         r2 = np.sum(r**2, axis=0)[..., np.newaxis, np.newaxis]
         radial = np.sum(self.contraction_coefficients * np.exp(-self.exponents * r2), axis=-1)
-        if self.unrestricted:
-            if spin == 'up':
-                angular = self.mo[0, mo] * self.angular_part(r)
-            else:
-                angular = self.mo[1, mo] * self.angular_part(r)
-        else:
-            angular = self.mo[0, mo] * self.angular_part(r)
+        angular = mo * self.angular_part(r)
         return np.sum(angular * radial, axis=-1)
 
     def coulomb(self, r):
@@ -196,26 +189,26 @@ class Gwfn:
 
     def Be_1s2s(self, r1, r2, r3, r4):
         """HF = |1s(r1)2s(r2)| * |1s(r3)2s(r4)|"""
-        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 1, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 1, 'up')
-        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 1, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 1, 'down')
+        alpha = self.mo_wfn(r1, self.mo[0, 0]) * self.mo_wfn(r2, self.mo[0, 1]) - self.mo_wfn(r2, self.mo[0, 0]) * self.mo_wfn(r1, self.mo[0, 1])
+        beta  = self.mo_wfn(r3, self.mo[0, 0]) * self.mo_wfn(r4, self.mo[0, 1]) - self.mo_wfn(r4, self.mo[0, 0]) * self.mo_wfn(r3, self.mo[0, 1])
         return alpha * beta
 
     def Be_1s2px(self, r1, r2, r3, r4):
         """HF = |1s(r1)2px(r2)| * |1s(r3)2px(r4)|"""
-        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 2, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 2, 'up')
-        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 2, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 2, 'down')
+        alpha = self.mo_wfn(r1, self.mo[0, 0]) * self.mo_wfn(r2, self.mo[0, 2]) - self.mo_wfn(r2, self.mo[0, 0]) * self.mo_wfn(r1, self.mo[0, 2])
+        beta  = self.mo_wfn(r3, self.mo[0, 0]) * self.mo_wfn(r4, self.mo[0, 2]) - self.mo_wfn(r4, self.mo[0, 0]) * self.mo_wfn(r3, self.mo[0, 2])
         return alpha * beta
 
     def Be_1s2py(self, r1, r2, r3, r4):
         """HF = |1s(r1)2py(r2)| * |1s(r3)2py(r4)|"""
-        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 3, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 3, 'up')
-        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 3, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 3, 'down')
+        alpha = self.mo_wfn(r1, self.mo[0, 0]) * self.mo_wfn(r2, self.mo[0, 3]) - self.mo_wfn(r2, self.mo[0, 0]) * self.mo_wfn(r1, self.mo[0, 3])
+        beta  = self.mo_wfn(r3, self.mo[0, 0]) * self.mo_wfn(r4, self.mo[0, 3]) - self.mo_wfn(r4, self.mo[0, 0]) * self.mo_wfn(r3, self.mo[0, 3])
         return alpha * beta
 
     def Be_1s2pz(self, r1, r2, r3, r4):
         """HF = |1s(r1)2pz(r2)| * |1s(r3)2pz(r4)|"""
-        alpha = self.mo_wfn(r1, 0, 'up') * self.mo_wfn(r2, 4, 'up') - self.mo_wfn(r2, 0, 'up') * self.mo_wfn(r1, 4, 'up')
-        beta = self.mo_wfn(r3, 0, 'down') * self.mo_wfn(r4, 4, 'down') - self.mo_wfn(r4, 0, 'down') * self.mo_wfn(r3, 4, 'down')
+        alpha = self.mo_wfn(r1, self.mo[0, 0]) * self.mo_wfn(r2, self.mo[0, 4]) - self.mo_wfn(r2, self.mo[0, 0]) * self.mo_wfn(r1, self.mo[0, 4])
+        beta  = self.mo_wfn(r3, self.mo[0, 0]) * self.mo_wfn(r4, self.mo[0, 4]) - self.mo_wfn(r4, self.mo[0, 0]) * self.mo_wfn(r3, self.mo[0, 4])
         return alpha * beta
 
     def Be_4det(self, *args):
