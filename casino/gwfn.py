@@ -122,7 +122,7 @@ class Gwfn:
                            3 * z**2 - r2,
                            x * z,
                            y * z,
-                           x**2 + y**2,
+                           x**2 - y**2,
                            x * y
                        ])
             if shell_type == 5:
