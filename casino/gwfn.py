@@ -132,8 +132,8 @@ class Gwfn:
                            3 * y * (5 * z**2 - r2) / 2,
                            15 * z * (x**2 - y**2),
                            30 * x * y * z,
-                           15 * x * (x**2 - 3 * x*y),
-                           15 * y * (3 * x*y - y*2),
+                           15 * x * (x**2 - 3 * y**2),
+                           15 * y * (3 * x**2 - y**2),
                        ])
             if shell_type == 6:
                 harmonic.extend([
