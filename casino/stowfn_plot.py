@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
-from mpl_toolkits.mplot3d import axes3d
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import axes3d
+except:
+    print('sudo apt-get install python3-matplotlib')
 from numpy.linalg import norm, det
 from plot_implicit import plot_implicit
 import numpy as np

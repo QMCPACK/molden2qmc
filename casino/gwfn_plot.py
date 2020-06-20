@@ -62,7 +62,7 @@ def main():
     Be_gwfn = Gwfn(args.gwfn_file)
     Be_backflow = Backflow(args.backflow_file)
 
-    if True:
+    if False:
         fn = Be_plot(Be_gwfn.Be_1s2s, Be_backflow.Be)
     else:
         fn = Be_plot(Be_gwfn.Be_4det)
