@@ -63,6 +63,18 @@ class Jastrow:
         except TypeError:
             return term[0]['C']
 
+    def L_hard(self, term):
+        try:
+            return term['L_hard']
+        except TypeError:
+            return term[0]['L_hard']
+
+    def ee_cusp(self, term):
+        return term.get('e-e cusp') == 'T'
+
+    def parameters(self, term, channel):
+        return term['Parameters'][channel]
+
     def linear_parameters(self, term, channel):
         """Load linear parameters into multidimensional array."""
         e_rank, n_rank = self.rank(term)
@@ -80,29 +92,30 @@ class Jastrow:
             linear_parameters[tuple(index)] = val[0]
         return linear_parameters
 
+    def cusp(self):
+        return lambda r: 1/r
+
     def basis(self, term, channel):
         """type of functional bases should be:
-        natural_power
+        natural power
         cosine
         cosine with k-cutoff
         r/(r^b+a) power
         1/(r+a) power
         r/(r+a) power
+        natural polynomial
         """
         if self.type(term) == 'natural power':
             return lambda r: r
         elif self.type(term) == 'r/(r^b+a) power':
-            parameters = term['Parameters']
-            a = parameters[channel]['a'][0]
-            b = parameters[channel]['b'][0]
+            a = self.parameters(term, channel)['a'][0]
+            b = self.parameters(term, channel)['b'][0]
             return lambda r: r/(r**b+a)
         elif self.type(term) == '1/(r+a) power':
-            parameters = term['Parameters']
-            a = parameters[channel]['a'][0]
+            a = self.parameters(term, channel)['a'][0]
             return lambda r: 1/(r+a)
         elif self.type(term) == 'r/(r+a) power':
-            parameters = term['Parameters']
-            a = parameters[channel]['a'][0]
+            a = self.parameters(term, channel)['a'][0]
             return lambda r: r/(r+a)
         else:
             print('basis with a {} type is not supported'.format(self.type(term)))
@@ -113,21 +126,25 @@ class Jastrow:
         polynomial
         alt polynomial
         gaussian
+        spline
         anisotropic polynomial
         """
         if term is None:
             return lambda r: 1.0
         elif self.type(term) in ('polynomial', 'anisotropic polynomial'):
             C = self.C(term['Constants'])
-            L = term['Parameters'][channel]['L'][0]
+            L = self.parameters(term, channel)['L'][0]
             return lambda r: (1-r/L) ** C * np.heaviside(L-r, 0.0)
         elif self.type(term) == 'alt polynomial':
             C = self.C(term['Constants'])
-            L = term['Parameters'][channel]['L'][0]
+            L = self.parameters(term, channel)['L'][0]
             return lambda r: (r-L) ** C * np.heaviside(L-r, 0.0)
         elif self.type(term) == 'gaussian':
-            L_hard = term['Parameters'][channel]['L_hard'][0]
-            return lambda r: exp(-(r/L)**2) * np.heaviside(L_hard-r/L, 0.0)
+            L_hard = self.L_hard(term['Constants'])
+            L = self.parameters(term, channel)['L'][0]
+            return lambda r: np.exp(-(r/L)**2) * np.heaviside(L_hard-r/L, 0.0)
+        elif self.type(term) == 'spline':
+            print('cutoff with {} type is not supported'.format(self.type(term)))
         else:
             print('cutoff with {} type is not supported'.format(self.type(term)))
             sys.exit(0)
