@@ -194,9 +194,9 @@ class Jastrow:
                     cutoff *= en_cutoff(riI)
 
         if len(p_args) == 1:
-            result = polyval(*p_args, self.linear_parameters(term, channel))
+            basis = polyval(*p_args, self.linear_parameters(term, channel))
         elif len(p_args) == 2:
-            result = polyval2d(*p_args, self.linear_parameters(term, channel))
+            basis = polyval2d(*p_args, self.linear_parameters(term, channel))
         elif len(p_args) == 3:
-            result = polyval3d(*p_args, self.linear_parameters(term, channel))
-        return np.exp(result * cutoff)
+            basis = polyval3d(*p_args, self.linear_parameters(term, channel))
+        return np.exp(basis * cutoff)

@@ -94,7 +94,7 @@ class Plot(Jastrow):
             # self.ax = self.fig.add_subplot(111)
         self.ax.clear()
         for i, channel in enumerate(self.channels):
-            self.ax.plot_wireframe(*self.grid, self.jastrow(self.term, channel, self.grid, self.xy_elec, self.xy_nucl), color=['blue', 'green'][i])
+            self.ax.plot_wireframe(*self.grid, self.jastrow(self.term, channel, self.grid, self.xy_elec, self.xy_nucl), color=['blue', 'green', 'red'][i])
             #
             # contours = self.ax.contour(*self.xy_grid(), self.jastrow3D(np.array(self.xy_grid()), self.xy_elec, self.xy_nucl, channel), 10, colors='black')
             # plt.clabel(contours, inline=True, fontsize=8)
